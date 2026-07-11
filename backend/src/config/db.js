@@ -6,7 +6,12 @@ import { dirname, join } from 'path'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const DB_PATH = join(__dirname, '../../database.sqlite')
+import { mkdirSync } from 'fs'
+
+const DATA_DIR = join(__dirname, '../../data')
+const DB_PATH = join(DATA_DIR, 'database.sqlite')
+
+mkdirSync(DATA_DIR, { recursive: true })
 
 let db
 
