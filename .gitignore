@@ -1,0 +1,21 @@
+# Dependencias de Node/React
+node_modules/
+.pnpm-store/
+
+# Compilación y builds
+dist/
+.vite/
+
+# Base de datos local (¡Muy importante no subir esto!)
+backend/*.sqlite
+backend/database.sqlite
+
+# Variables de entorno y contraseñas secretas
+.env
+.env.local
+backend/.env
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
