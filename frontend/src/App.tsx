@@ -80,7 +80,7 @@ function App() {
   }, [])
 
   if (!isAuthenticated && view === 'auth') {
-    return <Auth onLoginSuccess={handleLoginSuccess} />
+    return <Auth onLoginSuccess={handleLoginSuccess} onBackToHome={() => setView('home')} />
   }
 
   return (

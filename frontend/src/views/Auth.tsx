@@ -4,9 +4,10 @@ import logo from '../assets/logo-radio.png'
 
 interface AuthProps {
   onLoginSuccess: (token: string, username: string) => void
+  onBackToHome?: () => void
 }
 
-export default function Auth({ onLoginSuccess }: AuthProps) {
+export default function Auth({ onLoginSuccess, onBackToHome }: AuthProps) {
   const [isRegisterMode, setIsRegisterMode] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -41,7 +42,19 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/50 p-8 shadow-xl backdrop-blur">
+      <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/50 p-8 shadow-xl backdrop-blur">
+        {onBackToHome && (
+          <button
+            type="button"
+            onClick={onBackToHome}
+            className="absolute right-4 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-800 hover:text-white"
+            aria-label="Volver al inicio"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
         <div className="mb-8 text-center">
           <img src={logo} alt="" className="mx-auto mb-4 h-16 w-16 rounded-full object-cover" />
           <h1 className="text-2xl font-bold">Radiometro</h1>

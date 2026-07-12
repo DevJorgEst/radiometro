@@ -13,7 +13,7 @@ const navItems = [
 
 export default function BottomNav({ currentView, onNavigate, onLogout, isAuthenticated, onAuthRequest }: BottomNavProps) {
   return (
-    <nav className="flex items-center justify-around border-t border-slate-700 bg-slate-800 p-8 md:hidden">
+    <nav className="flex min-h-[80px] items-center justify-around border-t border-slate-700 bg-slate-800 px-5 py-4 md:hidden">
       {navItems.map(({ view, icon, label }) => (
         <span
           key={view}
