@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
+if (!process.env.JWT_SECRET) {
+  throw new Error('CRITICAL: JWT_SECRET environment variable is not defined!')
+}
+const JWT_SECRET = process.env.JWT_SECRET
 
 export function authMiddleware(req, res, next) {
   const header = req.headers.authorization

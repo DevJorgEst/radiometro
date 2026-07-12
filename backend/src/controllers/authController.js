@@ -2,7 +2,10 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { getDb } from '../config/db.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
+if (!process.env.JWT_SECRET) {
+  throw new Error('CRITICAL: JWT_SECRET environment variable is not defined!')
+}
+const JWT_SECRET = process.env.JWT_SECRET
 
 export async function register(req, res) {
   try {
@@ -12,8 +15,8 @@ export async function register(req, res) {
       return res.status(400).json({ error: 'username y password son obligatorios' })
     }
 
-    if (password.length < 4) {
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' })
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' })
     }
 
     const db = await getDb()
@@ -23,7 +26,7 @@ export async function register(req, res) {
       return res.status(409).json({ error: 'El usuario ya existe' })
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 12)
     const result = await db.run(
       'INSERT INTO users (username, password) VALUES (?, ?)',
       username,
