@@ -1,5 +1,15 @@
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`
 
+export function getProxyImageUrl(url: string): string {
+  if (!url) return ''
+  return `${API_BASE}/proxy-image?url=${encodeURIComponent(url)}`
+}
+
+export function getProxyStreamUrl(url: string): string {
+  if (!url) return ''
+  return `${API_BASE}/proxy-stream?url=${encodeURIComponent(url)}`
+}
+
 export interface Station {
   id: string
   name: string

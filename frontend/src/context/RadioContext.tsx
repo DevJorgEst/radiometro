@@ -7,7 +7,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
-import { getFavorites, addFavorite, removeFavorite } from '../services/api'
+import { getFavorites, addFavorite, removeFavorite, getProxyStreamUrl } from '../services/api'
 import type { Station } from '../services/api'
 
 interface RadioContextValue {
@@ -56,7 +56,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     const url = station.url_resolved || station.url
     if (!url) return
 
-    audio.src = url
+    audio.src = getProxyStreamUrl(url)
     audio.load()
     audio.play().catch(() => setIsPlaying(false))
     setIsPlaying(true)

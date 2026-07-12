@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRadio } from '../context/RadioContext'
 import logo from '../assets/logo-radio.png'
 import type { Station } from '../services/api'
+import { getProxyImageUrl } from '../services/api'
 
 interface StationCardProps {
   station: Station
@@ -32,10 +33,9 @@ export default function StationCard({ station }: StationCardProps) {
       <div className="h-48 w-full shrink-0 overflow-hidden bg-slate-700 md:h-full md:w-48">
         {station.favicon && !imgError ? (
           <img
-            src={station.favicon}
+            src={getProxyImageUrl(station.favicon)}
             alt={station.name}
             className="h-full w-full object-cover"
-            crossOrigin="anonymous"
             onError={() => setImgError(true)}
           />
         ) : (

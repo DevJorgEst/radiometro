@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useRadio } from '../context/RadioContext'
 import logo from '../assets/logo-radio.png'
+import { getProxyImageUrl } from '../services/api'
 
 interface PlayerBarProps {
   onGuestFavoriteAttempt: () => void
@@ -51,10 +52,9 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
           )}
           <div className="w-12 h-12 shrink-0 overflow-hidden rounded-lg bg-slate-700">
             <img
-              src={currentStation?.favicon && !imgError ? currentStation.favicon : logo}
+              src={currentStation?.favicon && !imgError ? getProxyImageUrl(currentStation.favicon) : logo}
               alt=""
               className="h-full w-full object-cover"
-              crossOrigin="anonymous"
               onError={() => setImgError(true)}
             />
           </div>

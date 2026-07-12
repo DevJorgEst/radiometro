@@ -3,6 +3,7 @@ import cors from 'cors'
 import radioRoutes from './routes/radio.routes.js'
 import authRoutes from './routes/auth.routes.js'
 import favoritesRoutes from './routes/favorites.routes.js'
+import proxyRoutes from './routes/proxy.routes.js'
 
 const app = express()
 
@@ -16,5 +17,6 @@ app.get('/', (_req, res) => {
 app.use('/api', radioRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/favorites', favoritesRoutes)
+app.use('/api', proxyRoutes)
 
 export default app
