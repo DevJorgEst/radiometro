@@ -1,6 +1,9 @@
 interface BottomNavProps {
   currentView: string
   onNavigate: (view: string) => void
+  onLogout: () => void
+  isAuthenticated: boolean
+  onAuthRequest: () => void
 }
 
 const navItems = [
@@ -8,7 +11,7 @@ const navItems = [
   { view: 'favorites', icon: '❤️', label: 'Favoritos' },
 ]
 
-export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
+export default function BottomNav({ currentView, onNavigate, onLogout, isAuthenticated, onAuthRequest }: BottomNavProps) {
   return (
     <nav className="flex items-center justify-around border-t border-slate-700 bg-slate-800 p-8 md:hidden">
       {navItems.map(({ view, icon, label }) => (
@@ -25,6 +28,23 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
           {label}
         </span>
       ))}
+      {isAuthenticated ? (
+        <span
+          onClick={onLogout}
+          className="flex cursor-pointer flex-col items-center justify-center gap-1 text-sm text-slate-400 hover:text-white"
+        >
+          <span className="text-xl">🚪</span>
+          Salir
+        </span>
+      ) : (
+        <span
+          onClick={onAuthRequest}
+          className="flex cursor-pointer flex-col items-center justify-center gap-1 text-sm text-slate-400 hover:text-white"
+        >
+          <span className="text-xl">🔑</span>
+          Login
+        </span>
+      )}
     </nav>
   )
 }

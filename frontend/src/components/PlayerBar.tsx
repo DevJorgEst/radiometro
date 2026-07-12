@@ -2,12 +2,26 @@ import { useState } from 'react'
 import { useRadio } from '../context/RadioContext'
 import logo from '../assets/logo-radio.png'
 
-export default function PlayerBar() {
+interface PlayerBarProps {
+  onGuestFavoriteAttempt: () => void
+}
+
+export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
   const [imgError, setImgError] = useState(false)
   const { currentStation, isPlaying, volume, isLoading, togglePlay, setVolume, favorites, toggleFavorite } =
     useRadio()
 
   const isFav = currentStation ? favorites.some(f => f.id === currentStation.id) : false
+
+  function handleFavoriteClick() {
+    if (!currentStation) return
+    const token = localStorage.getItem('token')
+    if (!token) {
+      onGuestFavoriteAttempt()
+      return
+    }
+    toggleFavorite(currentStation)
+  }
 
   return (
     <footer className="border-t border-slate-700 bg-slate-900 px-5 py-4 min-h-[80px]">
@@ -17,7 +31,7 @@ export default function PlayerBar() {
           {currentStation && (
             <button
               type="button"
-              onClick={() => toggleFavorite(currentStation)}
+              onClick={handleFavoriteClick}
               className="shrink-0 cursor-pointer"
               aria-label={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
             >
