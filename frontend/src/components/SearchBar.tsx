@@ -12,6 +12,7 @@ export default function SearchBar({ onSearch, loading }: SearchBarProps) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSearch({ name: name.trim() })
+    document.activeElement && 'blur' in document.activeElement && (document.activeElement as HTMLElement).blur()
   }
 
   return (
@@ -27,7 +28,7 @@ export default function SearchBar({ onSearch, loading }: SearchBarProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Buscar emisoras..."
-            className="w-full rounded-lg border border-slate-700 bg-slate-800 py-2 pl-9 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-lg border border-slate-700 bg-slate-800 py-2 pl-9 pr-4 text-base text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 md:text-sm"
           />
         </div>
         <button
