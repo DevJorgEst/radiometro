@@ -23,7 +23,7 @@ export default function Layout({
   onGuestFavoriteAttempt,
 }: LayoutProps) {
   return (
-    <div className="flex min-h-dvh bg-slate-900 text-white">
+    <div className="flex h-dvh overflow-hidden bg-slate-900 text-white">
       <Sidebar
         currentView={currentView}
         onNavigate={onNavigate}
@@ -32,8 +32,8 @@ export default function Layout({
         onAuthRequest={onAuthRequest}
       />
 
-      <div className="flex-1 w-full min-h-screen overflow-y-auto bg-slate-950">
-        <main className="pb-48 md:pb-32">
+      <div className="flex flex-1 w-full flex-col overflow-y-auto bg-slate-950">
+        <main className="flex-1 pb-48 md:pb-32">
           {children}
         </main>
       </div>

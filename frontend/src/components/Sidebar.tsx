@@ -18,7 +18,7 @@ export default function Sidebar({ currentView, onNavigate, onLogout, isAuthentic
   const { currentUser } = useRadio()
 
   return (
-    <aside className="hidden h-dvh w-64 shrink-0 flex-col bg-slate-800 p-4 md:flex">
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-slate-800 p-4 md:flex">
       <div className="mb-8 flex items-center gap-2 border-b border-slate-700 pb-4">
         <img src={logo} alt="Radiometro" className="w-10 h-10 rounded-full object-cover" />
         <span className="text-lg font-semibold">Radiometro</span>
