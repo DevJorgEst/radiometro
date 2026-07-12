@@ -13,7 +13,11 @@ backend/database.sqlite
 # Variables de entorno y contraseñas secretas
 .env
 .env.local
+.env.production
+.env.development
 backend/.env
+frontend/.env
+frontend/.env.production
 
 # Archivos del sistema
 .DS_Store
