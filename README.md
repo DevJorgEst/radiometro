@@ -73,4 +73,30 @@ Abre tu navegador en `http://localhost:5173` y ¡listo!
 - **Resetear Base de Datos:** Elimina el archivo `backend/data/database.sqlite` y reinicia el backend; las tablas se generarán limpias automáticamente.
 
 ---
+
+## 🌐 Producción (Render.com)
+
+El proyecto está desplegado en **https://radiometro.render.com**.
+
+### Variables de entorno del Backend
+
+Configúralas en el panel de Render (servicio del backend):
+
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `JWT_SECRET` | ✅ | Secreto para firmar los tokens (generar con `openssl rand -base64 48`). El backend no arranca sin ella. |
+| `PORT` | ❌ | Puerto del servicio (Render lo inyecta automáticamente). |
+| `CORS_ORIGINS` | ❌ | Orígenes permitidos separados por coma. Para producción: `https://radiometro.render.com` |
+
+### Variables de entorno del Frontend
+
+En el build de producción del frontend (Render: campo *Build Command* o variable de entorno en tiempo de build):
+
+| Variable | Descripción |
+|---|---|
+| `VITE_API_URL` | URL pública del backend, p. ej. `https://backend-tu-servicio.onrender.com` (sin `/api`). |
+
+> **Importante:** la PWA sirve el frontend en `https://radiometro.render.com` y el backend debe estar publicado en **otro servicio** de Render con su propia URL pública.
+
+---
 Desarrollado con ⚡ por DevJorgEst.
