@@ -1,7 +1,7 @@
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`
 
-export function getProxyImageUrl(url: string): string {
-  if (!url) return ''
+export function getProxyImageUrl(url: string | null | undefined): string {
+  if (!url || url === 'null') return '/logo-radio.png'
   return `${API_BASE}/proxy-image?url=${encodeURIComponent(url)}`
 }
 

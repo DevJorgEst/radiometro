@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useRadio } from '../context/RadioContext'
 import logo from '../assets/logo-radio.png'
 import type { Station } from '../services/api'
@@ -9,7 +8,6 @@ interface StationCardProps {
 }
 
 export default function StationCard({ station }: StationCardProps) {
-  const [imgError, setImgError] = useState(false)
   const { currentStation, isPlaying, isLoading, play } = useRadio()
 
   const isActive = currentStation?.id === station.id
@@ -31,12 +29,14 @@ export default function StationCard({ station }: StationCardProps) {
       className="flex w-full cursor-pointer flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 shadow-lg backdrop-blur transition-all duration-300 hover:bg-slate-900 md:flex-row"
     >
       <div className="h-48 w-full shrink-0 overflow-hidden bg-slate-700 md:h-full md:w-48">
-        {station.favicon && !imgError ? (
+        {station.favicon ? (
           <img
             src={getProxyImageUrl(station.favicon)}
             alt={station.name}
             className="h-full w-full object-cover"
-            onError={() => setImgError(true)}
+            onError={(e) => {
+              e.currentTarget.src = '/logo-radio.png'
+            }}
           />
         ) : (
           <img

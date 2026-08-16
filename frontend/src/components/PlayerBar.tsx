@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useRadio } from '../context/RadioContext'
 import logo from '../assets/logo-radio.png'
 import { getProxyImageUrl } from '../services/api'
@@ -8,7 +7,6 @@ interface PlayerBarProps {
 }
 
 export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
-  const [imgError, setImgError] = useState(false)
   const { currentStation, isPlaying, volume, isLoading, togglePlay, setVolume, favorites, toggleFavorite } =
     useRadio()
 
@@ -52,10 +50,12 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
           )}
           <div className="w-12 h-12 shrink-0 overflow-hidden rounded-lg bg-slate-700">
             <img
-              src={currentStation?.favicon && !imgError ? getProxyImageUrl(currentStation.favicon) : logo}
+              src={currentStation?.favicon ? getProxyImageUrl(currentStation.favicon) : logo}
               alt=""
               className="h-full w-full object-cover"
-              onError={() => setImgError(true)}
+              onError={(e) => {
+                e.currentTarget.src = '/logo-radio.png'
+              }}
             />
           </div>
           <div className="min-w-0">

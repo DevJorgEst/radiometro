@@ -6,6 +6,7 @@ const router = Router()
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const TIMEOUT_MS = 10000
+const USER_AGENT = 'Mozilla/5.0 (compatible; Radiometro/1.0)'
 
 function fetchWithRedirects(url, maxRedirects = 3) {
   return new Promise((resolve, reject) => {
@@ -18,6 +19,7 @@ function fetchWithRedirects(url, maxRedirects = 3) {
       try {
         response = await fetch(currentUrl, {
           redirect: 'manual',
+          headers: { 'User-Agent': USER_AGENT },
           signal: AbortSignal.timeout(TIMEOUT_MS),
         })
       } catch (err) {
@@ -42,8 +44,8 @@ function fetchWithRedirects(url, maxRedirects = 3) {
 
 router.get('/proxy-image', async (req, res) => {
   const { url } = req.query
-  if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: 'url is required' })
+  if (!url || typeof url !== 'string' || url === 'null') {
+    return res.status(400).json({ error: 'url es requerida' })
   }
 
   try {
@@ -64,7 +66,10 @@ router.get('/proxy-image', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=86400')
     res.send(buffer)
   } catch (err) {
-    res.status(400).json({ error: err.message === 'URL no permitida' ? err.message : 'Error al cargar la imagen' })
+    if (err.message === 'URL no permitida') {
+      return res.status(400).json({ error: err.message })
+    }
+    return res.status(502).json({ error: 'No se pudo cargar la imagen de origen' })
   }
 })
 
