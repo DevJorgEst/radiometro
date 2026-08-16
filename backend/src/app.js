@@ -7,7 +7,12 @@ import proxyRoutes from './routes/proxy.routes.js'
 
 const app = express()
 
-app.use(cors())
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:4173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean)
+
+app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
 
 app.get('/', (_req, res) => {

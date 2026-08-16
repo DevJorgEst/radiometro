@@ -4,15 +4,16 @@ export async function searchStations(req, res) {
   try {
     const { name, country, language, tag } = req.query
 
-    let url = RADIO_BROWSER_URL
+    const params = new URLSearchParams()
+    if (name) params.set('name', name)
+    if (country) params.set('country', country)
+    if (language) params.set('language', language)
+    if (tag) params.set('tag', tag)
+    if (!params.has('limit')) params.set('limit', '30')
 
-    if (name) url += `/byname/${encodeURIComponent(name)}`
-    else if (country) url += `/bycountry/${encodeURIComponent(country)}`
-    else if (language) url += `/bylanguage/${encodeURIComponent(language)}`
-    else if (tag) url += `/bytag/${encodeURIComponent(tag)}`
-    else url += '?limit=30'
+    const url = `${RADIO_BROWSER_URL}/search?${params.toString()}`
 
-    const response = await fetch(url)
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) })
     if (!response.ok) throw new Error(`Radio Browser error: ${response.status}`)
 
     let stations = await response.json()
