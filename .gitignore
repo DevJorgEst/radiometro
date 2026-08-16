@@ -7,8 +7,7 @@ dist/
 .vite/
 
 # Base de datos local (¡Muy importante no subir esto!)
-backend/*.sqlite
-backend/database.sqlite
+backend/data/*.sqlite
 
 # Variables de entorno y contraseñas secretas
 .env

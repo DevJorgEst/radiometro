@@ -45,7 +45,10 @@ cd radiometro
 ```bash
 cd backend
 pnpm install
-# Crea un archivo .env si necesitas cambiar el puerto (Por defecto: 5000)
+# Copia `.env.example` a `.env` y rellena JWT_SECRET:
+#   cp .env.example .env
+#   JWT_SECRET=$(openssl rand -base64 48)
+# El backend NO arranca sin la variable JWT_SECRET definida.
 pnpm run dev
 ```
 
@@ -67,7 +70,7 @@ Abre tu navegador en `http://localhost:5173` y ¡listo!
   cd frontend
   pnpm run build && pnpm run preview
   ```
-- **Resetear Base de Datos:** Elimina el archivo `backend/database.sqlite` y reinicia el backend; las tablas se generarán limpias automáticamente.
+- **Resetear Base de Datos:** Elimina el archivo `backend/data/database.sqlite` y reinicia el backend; las tablas se generarán limpias automáticamente.
 
 ---
 Desarrollado con ⚡ por DevJorgEst.

@@ -85,6 +85,6 @@ await db.run(
 
 Al trabajar con SQLite, el mantenimiento es sumamente sencillo gracias a su naturaleza local:
 
-- **Reset Completo:** Si deseas limpiar todas las cuentas de prueba y empezar de cero, simplemente elimina el archivo `backend/database.sqlite` con el servidor apagado. Al encenderlo, todo volverá a su estado inicial limpio.
+- **Reset Completo:** Si deseas limpiar todas las cuentas de prueba y empezar de cero, simplemente elimina el archivo `backend/data/database.sqlite` con el servidor apagado. Al encenderlo, todo volverá a su estado inicial limpio.
 - **Visualización de datos:** Puedes instalar la extensión *"SQLite Viewer"* en VS Code o descargar el programa gratuito *DB Browser for SQLite* para abrir el archivo `database.sqlite` y examinar visualmente las filas de usuarios y favoritos en tiempo real mientras pruebas la aplicación.
 
