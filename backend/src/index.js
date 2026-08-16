@@ -1,5 +1,11 @@
 import 'dotenv/config'
-import app from './app.js'
+
+if (!process.env.JWT_SECRET) {
+  console.error('CRITICAL: JWT_SECRET no está definida en process.env. El servidor NO arrancará.')
+  process.exit(1)
+}
+
+const { default: app } = await import('./app.js')
 
 const PORT = process.env.PORT || 5000
 

@@ -7,12 +7,39 @@ import proxyRoutes from './routes/proxy.routes.js'
 
 const app = express()
 
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:4173')
+const allowedOrigins = [
+  'https://radiometro.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:3000'
+]
+
+const envOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean)
 
-app.use(cors({ origin: allowedOrigins }))
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL)
+}
+allowedOrigins.push(...envOrigins)
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true)
+    } else if (process.env.FRONTEND_URL) {
+      callback(null, true)
+    } else {
+      callback(new Error('Origen no permitido por CORS'))
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}
+
+app.use(cors(corsOptions))
+app.options('/{*splat}', cors(corsOptions))
 app.use(express.json())
 
 app.get('/', (_req, res) => {
