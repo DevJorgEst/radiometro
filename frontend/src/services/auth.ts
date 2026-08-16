@@ -35,3 +35,17 @@ export async function login(
   localStorage.setItem('token', data.token)
   return data
 }
+
+export async function validateToken(): Promise<{ user: { id: number; username: string } }> {
+  const token = localStorage.getItem('token')
+  if (!token) throw new Error('Sin sesión')
+
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    localStorage.removeItem('token')
+    throw new Error(`Error ${res.status}`)
+  }
+  return res.json()
+}

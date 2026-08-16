@@ -7,7 +7,8 @@ import StationCard from './components/StationCard'
 import Favorites from './views/Favorites'
 import GuestFavoriteModal from './components/GuestFavoriteModal'
 import { searchStations } from './services/api'
-import type { Station } from './services/api'
+import { validateToken } from './services/auth'
+import type { Station, SearchFilters } from './services/api'
 
 type View = 'home' | 'favorites' | 'auth'
 
@@ -45,7 +46,7 @@ function App() {
     setView('home')
   }
 
-  async function handleSearch(filters: { name: string }) {
+  async function handleSearch(filters: SearchFilters) {
     setLoading(true)
     setError(null)
     try {
@@ -78,6 +79,32 @@ function App() {
     }
     loadInitial()
   }, [])
+
+  const sessionChecked = useRef(false)
+
+  useEffect(() => {
+    if (sessionChecked.current) return
+    sessionChecked.current = true
+
+    if (!isAuthenticated) return
+
+    const storedUser = localStorage.getItem('currentUser')
+    if (storedUser) {
+      setCurrentUser(storedUser)
+      fetchFavorites()
+    }
+
+    validateToken()
+      .then(({ user }) => {
+        setCurrentUser(user.username)
+        fetchFavorites()
+      })
+      .catch(() => {
+        clearAll()
+        localStorage.removeItem('token')
+        setToken(null)
+      })
+  }, [setCurrentUser, fetchFavorites, clearAll, isAuthenticated])
 
   if (!isAuthenticated && view === 'auth') {
     return <Auth onLoginSuccess={handleLoginSuccess} onBackToHome={() => setView('home')} />

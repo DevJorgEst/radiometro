@@ -88,6 +88,29 @@ test('login de usuario inexistente devuelve 401', async () => {
   assert.equal(res.status, 401)
 })
 
+test('GET /auth/me con token válido devuelve el usuario', async () => {
+  const loginRes = await post('/api/auth/login', { username: 'alice', password: 'password123' })
+  const { token } = await loginRes.json()
+  const res = await fetch(`${baseUrl}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  assert.equal(res.status, 200)
+  const body = await res.json()
+  assert.equal(body.user.username, 'alice')
+})
+
+test('GET /auth/me sin token devuelve 401', async () => {
+  const res = await fetch(`${baseUrl}/api/auth/me`)
+  assert.equal(res.status, 401)
+})
+
+test('GET /auth/me con token inválido devuelve 401', async () => {
+  const res = await fetch(`${baseUrl}/api/auth/me`, {
+    headers: { Authorization: 'Bearer token-invalido' },
+  })
+  assert.equal(res.status, 401)
+})
+
 test('GET favoritos sin token devuelve 401', async () => {
   const res = await get('/api/favorites')
   assert.equal(res.status, 401)

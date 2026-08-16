@@ -78,3 +78,7 @@ export async function login(req, res) {
     res.status(500).json({ error: 'Error al iniciar sesión' })
   }
 }
+
+export async function me(req, res) {
+  res.json({ user: { id: req.user.id, username: req.user.username } })
+}
