@@ -20,7 +20,7 @@ export default function Sidebar({ currentView, onNavigate, onLogout, isAuthentic
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-slate-800 p-4 md:flex">
       <div className="mb-8 flex items-center gap-2 border-b border-slate-700 pb-4">
-        <img src={logo} alt="Radiometro" className="w-10 h-10 rounded-full object-cover" />
+        <img src={logo} alt="RadioMetro" className="w-10 h-10 object-contain flex-shrink-0" style={{ imageRendering: 'pixelated' }} />
         <span className="text-lg font-semibold">Radiometro</span>
       </div>
 

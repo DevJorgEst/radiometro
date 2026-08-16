@@ -113,7 +113,7 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
             width="14"
             height="14"
             fill="currentColor"
-            className="text-slate-400"
+            className="text-slate-300"
             viewBox="0 0 16 16"
           >
             <path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z" />
@@ -127,7 +127,7 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
             step="0.05"
             value={volume}
             onChange={(e) => setVolume(Number(e.target.value))}
-            className="h-1 w-24 cursor-pointer accent-indigo-500 sm:w-28"
+            className="volume-slider h-1.5 w-24 cursor-pointer accent-green-500 rounded-lg bg-slate-700 sm:w-28"
             aria-label="Volumen"
           />
         </div>

@@ -18,7 +18,7 @@ export default function SearchBar({ onSearch, loading }: SearchBarProps) {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-900/80 px-4 py-3 backdrop-blur-md">
       <form onSubmit={handleSubmit} className="mx-auto flex max-w-4xl items-center gap-3">
-        <img src={logo} alt="Radiometro" className="w-8 h-8 rounded-full object-cover md:hidden" />
+        <img src={logo} alt="RadioMetro" className="w-8 h-8 object-contain flex-shrink-0 md:hidden" style={{ imageRendering: 'pixelated' }} />
         <div className="relative flex-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
             🔍

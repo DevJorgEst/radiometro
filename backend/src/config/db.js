@@ -9,9 +9,9 @@ const __dirname = dirname(__filename)
 import { mkdirSync } from 'fs'
 
 const DATA_DIR = join(__dirname, '../../data')
-const DB_PATH = join(DATA_DIR, 'database.sqlite')
+const DB_PATH = process.env.DB_PATH || join(DATA_DIR, 'database.sqlite')
 
-mkdirSync(DATA_DIR, { recursive: true })
+mkdirSync(DB_PATH === ':memory:' ? DATA_DIR : dirname(DB_PATH), { recursive: true })
 
 let db
 
@@ -45,4 +45,11 @@ export async function getDb() {
   `)
 
   return db
+}
+
+export async function closeDb() {
+  if (db) {
+    await db.close()
+    db = undefined
+  }
 }
