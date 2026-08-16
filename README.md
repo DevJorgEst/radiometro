@@ -37,7 +37,7 @@ Tener instalado [Node.js](https://nodejs.org) y un gestor de paquetes como `pnpm
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com
+git clone git@github.com:DevJorgEst/radiometro.git
 cd radiometro
 ```
 
