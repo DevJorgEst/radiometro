@@ -22,3 +22,6 @@ frontend/.env.production
 .DS_Store
 Thumbs.db
 
+# Guía de trabajo del agente
+AGENTS.md
+
