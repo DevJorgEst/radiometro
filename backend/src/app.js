@@ -7,12 +7,46 @@ import proxyRoutes from './routes/proxy.routes.js'
 
 const app = express()
 
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:4173')
+// Orígenes permitidos: defaults de desarrollo + CORS_ORIGINS (coma) + FRONTEND_URL.
+// Nunca se acepta un origen fuera de esta lista (sin bypass condicionado a env).
+const DEV_DEFAULT_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:3000',
+]
+
+const envOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean)
 
-app.use(cors({ origin: allowedOrigins }))
+const frontendOrigin = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.trim() : ''
+
+const allowedOrigins = [
+  ...new Set([
+    ...DEV_DEFAULT_ORIGINS,
+    ...(frontendOrigin ? [frontendOrigin] : []),
+    ...envOrigins,
+  ]),
+]
+
+// Bearer token en localStorage -> no se usan cookies, credentials queda fuera.
+const corsOptions = {
+  origin(origin, callback) {
+    // Peticiones sin Origin (curl, server-to-server) no están sujetas a CORS.
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+      return
+    }
+    // Origen no permitido: se omite la cabecera (403 lógico en el navegador)
+    // en vez de lanzar un Error que convertiría la petición en un 500 con stack.
+    callback(null, false)
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}
+
+app.use(cors(corsOptions))
 app.use(express.json())
 
 app.get('/', (_req, res) => {
