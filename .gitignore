@@ -25,3 +25,6 @@ Thumbs.db
 
 # Playwright MCP Artifacts
 .playwright-mcp/
+
+# Vite PWA Dev Directory
+frontend/dev-dist/
