@@ -22,3 +22,12 @@ frontend/.env.production
 .DS_Store
 Thumbs.db
 
+
+# Playwright MCP Artifacts
+.playwright-mcp/
+
+# Guía local del Agente
+AGENTS.md
+
+# Vite PWA Dev Directory
+frontend/dev-dist/

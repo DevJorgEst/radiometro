@@ -1,4 +1,4 @@
-import { useRadio } from '../context/RadioContext'
+import { useRadio } from '../context/radio-context'
 import logo from '../assets/logo-radio.png'
 
 interface SidebarProps {
