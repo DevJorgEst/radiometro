@@ -1,7 +1,11 @@
+import defaultLogo from '../assets/logo-radio.png'
+
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`
 
-export function getProxyImageUrl(url: string): string {
-  if (!url) return ''
+// Tolerante a null/undefined/'null' (Radio Browser devuelve strings "null"
+// en algunos favicons): devuelve el logo del bundler sin invocar al proxy.
+export function getProxyImageUrl(url: string | null | undefined): string {
+  if (!url || url === 'null') return defaultLogo
   return `${API_BASE}/proxy-image?url=${encodeURIComponent(url)}`
 }
 

@@ -23,7 +23,10 @@ export default function SearchBar({ onSearch, loading }: SearchBarProps) {
       language: language.trim() || undefined,
       tag: tag.trim() || undefined,
     })
-    document.activeElement && 'blur' in document.activeElement && (document.activeElement as HTMLElement).blur()
+    const active = document.activeElement
+    if (active instanceof HTMLElement) {
+      active.blur()
+    }
   }
 
   function handleClear() {

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useRadio } from '../context/RadioContext'
+import { useEffect, useState } from 'react'
+import { useRadio } from '../context/radio-context'
 import logo from '../assets/logo-radio.png'
 import { getProxyImageUrl } from '../services/api'
 
@@ -11,6 +11,12 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
   const [imgError, setImgError] = useState(false)
   const { currentStation, isPlaying, volume, isLoading, togglePlay, setVolume, favorites, toggleFavorite } =
     useRadio()
+
+  // Cada emisora nueva vuelve a intentar su favicon: un favicon roto de una
+  // emisora no debe "envenenar" a las siguientes (logo permanente).
+  useEffect(() => {
+    setImgError(false)
+  }, [currentStation?.id])
 
   const isFav = currentStation ? favorites.some(f => f.id === currentStation.id) : false
 
@@ -51,12 +57,20 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
             </button>
           )}
           <div className="w-12 h-12 shrink-0 overflow-hidden rounded-lg bg-slate-700">
-            <img
-              src={currentStation?.favicon && !imgError ? getProxyImageUrl(currentStation.favicon) : logo}
-              alt=""
-              className="h-full w-full object-cover"
-              onError={() => setImgError(true)}
-            />
+            {currentStation?.favicon && !imgError ? (
+              <img
+                src={getProxyImageUrl(currentStation.favicon)}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <img
+                src={logo}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-white max-w-[180px]">

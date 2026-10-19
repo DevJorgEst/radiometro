@@ -1,33 +1,13 @@
 import {
-  createContext,
-  useContext,
   useRef,
   useState,
   useEffect,
   useCallback,
   type ReactNode,
 } from 'react'
+import { RadioContext } from './radio-context'
 import { getFavorites, addFavorite, removeFavorite, getProxyStreamUrl } from '../services/api'
 import type { Station } from '../services/api'
-
-interface RadioContextValue {
-  currentStation: Station | null
-  isPlaying: boolean
-  volume: number
-  isLoading: boolean
-  favorites: Station[]
-  currentUser: string | null
-  play: (station: Station) => void
-  pause: () => void
-  togglePlay: () => void
-  setVolume: (vol: number) => void
-  toggleFavorite: (station: Station) => void
-  clearAll: () => void
-  setCurrentUser: (username: string | null) => void
-  fetchFavorites: () => Promise<void>
-}
-
-const RadioContext = createContext<RadioContextValue | null>(null)
 
 export function RadioProvider({ children }: { children: ReactNode }) {
   const [currentStation, setCurrentStation] = useState<Station | null>(null)
@@ -222,8 +202,3 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useRadio() {
-  const ctx = useContext(RadioContext)
-  if (!ctx) throw new Error('useRadio must be used within RadioProvider')
-  return ctx
-}

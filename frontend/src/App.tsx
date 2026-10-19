@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useRadio } from './context/RadioContext'
+import { useRadio } from './context/radio-context'
 import Layout from './components/Layout'
 import Auth from './views/Auth'
 import SearchBar from './components/SearchBar'
