@@ -14,6 +14,8 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolumeState] = useState(0.7)
   const [isLoading, setIsLoading] = useState(false)
+  // Segundos restantes del sleep timer; null = inactivo
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [favorites, setFavorites] = useState<Station[]>([])
   const [currentUser, setCurrentUserState] = useState<string | null>(
     () => localStorage.getItem('currentUser')
@@ -27,6 +29,13 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     } else {
       localStorage.removeItem('currentUser')
     }
+  }, [])
+
+  // Pausa centralizada: además de parar el audio, cancela el temporizador
+  // de apagado si el usuario pausa manualmente.
+  const pause = useCallback(() => {
+    audioRef.current?.pause()
+    setTimeLeft(null)
   }, [])
 
   // Switch to a new station: update src and play
@@ -49,7 +58,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
       if (currentStation?.id === station.id) {
         if (isPlaying) {
-          audio.pause()
+          pause()
         } else {
           audio.play().catch(() => {})
         }
@@ -57,23 +66,19 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         setCurrentStation(station)
       }
     },
-    [currentStation, isPlaying],
+    [currentStation, isPlaying, pause],
   )
-
-  const pause = useCallback(() => {
-    audioRef.current?.pause()
-  }, [])
 
   const togglePlay = useCallback(() => {
     if (!currentStation) return
     const audio = audioRef.current
     if (!audio) return
     if (isPlaying) {
-      audio.pause()
+      pause()
     } else {
       audio.play().catch(() => {})
     }
-  }, [currentStation, isPlaying])
+  }, [currentStation, isPlaying, pause])
 
   const setVolume = useCallback((vol: number) => {
     const v = Math.max(0, Math.min(1, vol))
@@ -81,6 +86,11 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     if (audioRef.current) {
       audioRef.current.volume = v
     }
+  }, [])
+
+  // minutos → segundos; null → cancelar
+  const setSleepTimer = useCallback((minutes: number | null) => {
+    setTimeLeft(minutes !== null ? Math.round(minutes * 60) : null)
   }, [])
 
   const fetchFavorites = useCallback(async () => {
@@ -156,6 +166,46 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Cuenta atrás del sleep timer: resta 1 cada segundo mientras esté activo.
+  // El efecto se recrea en cada tick de timeLeft para que el primer segundo
+  // nunca quede acortado por un tic anterior.
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return
+    const id = setInterval(() => {
+      setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : prev))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [timeLeft])
+
+  // Al llegar a 0: fade-out de 5 s (50 pasos de 100 ms) directamente sobre el
+  // elemento de audio y, al terminar, pausa() centralizada. El estado de
+  // volumen de React no se toca: solo se atenúa el elemento y se restaura.
+  useEffect(() => {
+    if (timeLeft !== 0) return
+    const audio = audioRef.current
+    if (!audio) {
+      setTimeLeft(null)
+      return
+    }
+    const originalVolume = audio.volume
+    const steps = 50
+    let step = 0
+    const id = setInterval(() => {
+      step += 1
+      audio.volume = Math.max(0, originalVolume * (1 - step / steps))
+      if (step >= steps) {
+        clearInterval(id)
+        pause() // pausa + limpia el temporizador (timeLeft → null)
+        audio.volume = originalVolume
+      }
+    }, 100)
+    // Si el usuario pausa/cancela a mitad del fade, se restaura el volumen.
+    return () => {
+      clearInterval(id)
+      if (step < steps) audio.volume = originalVolume
+    }
+  }, [timeLeft, pause])
+
   const clearAll = useCallback(() => {
     const audio = audioRef.current
     if (audio) {
@@ -166,6 +216,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     setCurrentStation(null)
     setIsPlaying(false)
     setIsLoading(false)
+    setTimeLeft(null)
     setFavorites([])
     setCurrentUser(null)
   }, [setCurrentUser])
@@ -184,12 +235,14 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         isPlaying,
         volume,
         isLoading,
+        timeLeft,
         favorites,
         currentUser,
         play,
         pause,
         togglePlay,
         setVolume,
+        setSleepTimer,
         toggleFavorite,
         clearAll,
         setCurrentUser,

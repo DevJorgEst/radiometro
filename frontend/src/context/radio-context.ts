@@ -9,12 +9,16 @@ export interface RadioContextValue {
   isPlaying: boolean
   volume: number
   isLoading: boolean
+  /** Segundos restantes del temporizador de apagado; null = inactivo */
+  timeLeft: number | null
   favorites: Station[]
   currentUser: string | null
   play: (station: Station) => void
   pause: () => void
   togglePlay: () => void
   setVolume: (vol: number) => void
+  /** Programa (minutos) o cancela (null) el apagado suave del reproductor */
+  setSleepTimer: (minutes: number | null) => void
   toggleFavorite: (station: Station) => void
   clearAll: () => void
   setCurrentUser: (username: string | null) => void
