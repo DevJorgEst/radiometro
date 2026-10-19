@@ -11,6 +11,10 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     VitePWA({
       registerType: 'autoUpdate',
+      // En dev también se inyectan manifest y Service Worker: sin esto,
+      // /manifest.webmanifest cae en el SPA fallback y Chrome muestra
+      // "Manifest: Syntax error" en la consola de desarrollo.
+      devOptions: { enabled: true },
       includeAssets: ['logo-radio.png'],
       manifest: {
         name: 'Radiometro',
@@ -44,6 +48,17 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
+            // Rutas sensibles: NUNCA se cachean. Workbox identifica la caché
+            // solo por URL e ignora la cabecera Authorization; con NetworkFirst
+            // los favoritos/GET de auth de un usuario podían servirse a otro
+            // tras cerrar sesión (fuga de privacidad en el mismo navegador).
+            // Ojo: /api/favorites se llama SIN barra final -> el patrón debe
+            // cubrir tanto '/api/favorites' como '/api/favorites/<id>'.
+            urlPattern: /^https?:\/\/.*\/api\/(auth|favorites)(\/|\?|$)/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            // El resto de la API (p.ej. búsquedas de emisoras, datos públicos)
             urlPattern: /^https?:\/\/.*\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {

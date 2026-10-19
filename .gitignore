@@ -28,3 +28,6 @@ Thumbs.db
 
 # Guía local del Agente
 AGENTS.md
+
+# Vite PWA Dev Directory
+frontend/dev-dist/
