@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRadio } from '../context/radio-context'
 import logo from '../assets/logo-radio.png'
 import { getProxyImageUrl } from '../services/api'
@@ -9,8 +9,39 @@ interface PlayerBarProps {
 
 export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
   const [imgError, setImgError] = useState(false)
-  const { currentStation, isPlaying, volume, isLoading, togglePlay, setVolume, favorites, toggleFavorite } =
-    useRadio()
+  const [timerOpen, setTimerOpen] = useState(false)
+  const timerRef = useRef<HTMLDivElement>(null)
+  const {
+    currentStation,
+    isPlaying,
+    volume,
+    isLoading,
+    timeLeft,
+    togglePlay,
+    setVolume,
+    setSleepTimer,
+    favorites,
+    toggleFavorite,
+  } = useRadio()
+
+  // Cerrar el menú del temporizador al pulsar fuera o con Escape
+  useEffect(() => {
+    if (!timerOpen) return
+    function handlePointerDown(e: PointerEvent) {
+      if (timerRef.current && !timerRef.current.contains(e.target as Node)) {
+        setTimerOpen(false)
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setTimerOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [timerOpen])
 
   // Cada emisora nueva vuelve a intentar su favicon: un favicon roto de una
   // emisora no debe "envenenar" a las siguientes (logo permanente).
@@ -19,6 +50,12 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
   }, [currentStation?.id])
 
   const isFav = currentStation ? favorites.some(f => f.id === currentStation.id) : false
+
+  // MM:SS del temporizador de apagado
+  const countdownLabel =
+    timeLeft !== null
+      ? `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`
+      : null
 
   function handleFavoriteClick() {
     if (!currentStation) return
@@ -119,6 +156,75 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
             </svg>
           )}
         </button>
+
+        {/* Sleep timer */}
+        <div ref={timerRef} className="relative flex items-center">
+          {countdownLabel && (
+            <span className="mr-2 text-xs tabular-nums text-slate-300" title="El sonido se desvanecerá al terminar">
+              {countdownLabel}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setTimerOpen(o => !o)}
+            aria-label="Temporizador de apagado"
+            aria-haspopup="menu"
+            aria-expanded={timerOpen}
+            className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-colors ${
+              timeLeft !== null ? 'text-green-400' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </button>
+
+          {timerOpen && (
+            <div
+              role="menu"
+              aria-label="Opciones del temporizador de apagado"
+              className="absolute bottom-full right-0 mb-2 w-48 overflow-hidden rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl shadow-black/40"
+            >
+              {[15, 30, 60].map((minutes) => (
+                <button
+                  key={minutes}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setSleepTimer(minutes)
+                    setTimerOpen(false)
+                  }}
+                  className="block w-full cursor-pointer px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-700"
+                >
+                  {minutes} min
+                </button>
+              ))}
+              <div className="mx-3 my-1 border-t border-slate-700" />
+              <button
+                type="button"
+                role="menuitem"
+                disabled={timeLeft === null}
+                onClick={() => {
+                  setSleepTimer(null)
+                  setTimerOpen(false)
+                }}
+                className="block w-full cursor-pointer px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+              >
+                Cancelar temporizador
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Volume slider */}
         <div className="hidden items-center gap-2 md:flex">
