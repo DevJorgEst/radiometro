@@ -25,3 +25,6 @@ Thumbs.db
 
 # Playwright MCP Artifacts
 .playwright-mcp/
+
+# Guía local del Agente
+AGENTS.md

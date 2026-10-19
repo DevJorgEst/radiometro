@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { RadioProvider, useRadio } from './RadioContext'
+import { RadioProvider } from './RadioContext'
+import { useRadio } from './radio-context'
 import type { Station } from '../services/api'
 
 const station: Station = {

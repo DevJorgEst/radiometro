@@ -1,4 +1,4 @@
-import { useRadio } from '../context/RadioContext'
+import { useRadio } from '../context/radio-context'
 import StationCard from '../components/StationCard'
 
 export default function Favorites() {

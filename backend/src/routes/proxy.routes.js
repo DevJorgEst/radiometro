@@ -6,6 +6,10 @@ const router = Router()
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const TIMEOUT_MS = 10000
+// User-Agent de navegador: CDNs de favicons bloquean el UA por defecto de
+// fetch ("undici"), lo que provocaba 404 upstream innecesarios.
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 
 function fetchWithRedirects(url, maxRedirects = 3) {
   return new Promise((resolve, reject) => {
@@ -18,6 +22,7 @@ function fetchWithRedirects(url, maxRedirects = 3) {
       try {
         response = await fetch(currentUrl, {
           redirect: 'manual',
+          headers: { 'User-Agent': USER_AGENT },
           signal: AbortSignal.timeout(TIMEOUT_MS),
         })
       } catch (err) {
@@ -42,14 +47,21 @@ function fetchWithRedirects(url, maxRedirects = 3) {
 
 router.get('/proxy-image', async (req, res) => {
   const { url } = req.query
-  if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: 'url is required' })
+  // 400 = fallo de validación/SSRF (no se intenta contacto con el origen)
+  if (!url || typeof url !== 'string' || url === 'null') {
+    return res.status(400).json({ error: 'url es requerida' })
   }
 
   try {
     const response = await fetchWithRedirects(url)
     if (!response.ok) {
-      return res.status(response.status).json({ error: 'Upstream error' })
+      // El upstream respondió: si falla (5xx) -> 502 Bad Gateway;
+      // si el recurso no existe (404 etc.) se reenvía el estado real.
+      await response.body?.cancel()
+      if (response.status >= 500) {
+        return res.status(502).json({ error: 'El servidor de origen falló' })
+      }
+      return res.status(response.status).json({ error: 'El recurso no está disponible en el origen' })
     }
 
     const contentType = response.headers.get('content-type') || 'image/png'
@@ -59,34 +71,45 @@ router.get('/proxy-image', async (req, res) => {
       return res.status(413).json({ error: 'Imagen demasiado grande' })
     }
 
-    res.set('Access-Control-Allow-Origin', '*')
     res.set('Content-Type', contentType)
     res.set('Cache-Control', 'public, max-age=86400')
     res.send(buffer)
   } catch (err) {
-    res.status(400).json({ error: err.message === 'URL no permitida' ? err.message : 'Error al cargar la imagen' })
+    if (err.message === 'URL no permitida') {
+      // Validación/SSRF -> 400
+      return res.status(400).json({ error: err.message })
+    }
+    // Timeout, DNS, conexión rechazada... -> 502
+    return res.status(502).json({ error: 'No se pudo cargar la imagen de origen' })
   }
 })
 
 router.get('/proxy-stream', async (req, res) => {
   const { url } = req.query
-  if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: 'url is required' })
+  if (!url || typeof url !== 'string' || url === 'null') {
+    return res.status(400).json({ error: 'url es requerida' })
   }
 
   try {
     const response = await fetchWithRedirects(url)
     if (!response.ok) {
-      return res.status(response.status).json({ error: 'Upstream error' })
+      await response.body?.cancel()
+      if (response.status >= 500) {
+        return res.status(502).json({ error: 'El servidor de origen falló' })
+      }
+      return res.status(response.status).json({ error: 'El recurso no está disponible en el origen' })
     }
 
-    res.set('Access-Control-Allow-Origin', '*')
     res.set('Content-Type', response.headers.get('content-type') || 'audio/mpeg')
 
     Readable.fromWeb(response.body).pipe(res)
   } catch (err) {
     if (!res.headersSent) {
-      res.status(400).json({ error: err.message === 'URL no permitida' ? err.message : 'Error al cargar el stream' })
+      if (err.message === 'URL no permitida') {
+        res.status(400).json({ error: err.message })
+      } else {
+        res.status(502).json({ error: 'No se pudo cargar el stream de origen' })
+      }
     } else {
       res.destroy()
     }
