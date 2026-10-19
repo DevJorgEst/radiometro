@@ -35,7 +35,7 @@ export interface SearchFilters {
 
 /* ── Stations ──────────────────────────────────────────── */
 
-export async function searchStations(filters: SearchFilters = {}): Promise<Station[]> {
+export async function searchStations(filters: SearchFilters = {}, signal?: AbortSignal): Promise<Station[]> {
   const params = new URLSearchParams()
   if (filters.name) params.set('name', filters.name)
   if (filters.country) params.set('country', filters.country)
@@ -45,7 +45,7 @@ export async function searchStations(filters: SearchFilters = {}): Promise<Stati
   const qs = params.toString()
   const url = qs ? `${API_BASE}/stations/search?${qs}` : `${API_BASE}/stations/search`
 
-  const res = await fetch(url)
+  const res = await fetch(url, { signal })
   if (!res.ok) {
     throw new Error(`Error ${res.status}: ${res.statusText}`)
   }
