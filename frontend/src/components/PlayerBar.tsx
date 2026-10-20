@@ -17,6 +17,7 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
     volume,
     isLoading,
     timeLeft,
+    playbackError,
     togglePlay,
     setVolume,
     setSleepTimer,
@@ -50,6 +51,18 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
   }, [currentStation?.id])
 
   const isFav = currentStation ? favorites.some(f => f.id === currentStation.id) : false
+
+  // Estado del stream: un fallo de reproducción se nombra en el punto donde
+  // el usuario lo mira (bajo el nombre de la emisora), no solo en el aviso.
+  const statusText = !currentStation
+    ? 'Busca y reproduce una emisora'
+    : playbackError
+      ? 'Señal perdida'
+      : isLoading
+        ? 'Cargando...'
+        : isPlaying
+          ? 'Sonando ahora'
+          : 'En pausa'
 
   // MM:SS del temporizador de apagado
   const countdownLabel =
@@ -113,14 +126,8 @@ export default function PlayerBar({ onGuestFavoriteAttempt }: PlayerBarProps) {
             <p className="truncate text-sm font-medium text-white max-w-[180px]">
               {currentStation?.name || 'Ninguna emisora seleccionada'}
             </p>
-            <p className="truncate text-xs text-slate-400">
-              {!currentStation
-                ? 'Busca y reproduce una emisora'
-                : isLoading
-                  ? 'Cargando...'
-                  : isPlaying
-                    ? 'Sonando ahora'
-                    : 'En pausa'}
+            <p className={`truncate text-xs ${playbackError ? 'text-red-400' : 'text-slate-400'}`}>
+              {statusText}
             </p>
           </div>
         </div>

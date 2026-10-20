@@ -6,10 +6,12 @@ import {
   type ReactNode,
 } from 'react'
 import { RadioContext } from './radio-context'
+import { useToast } from './toast-context'
 import { getFavorites, addFavorite, removeFavorite, getProxyStreamUrl } from '../services/api'
 import type { Station } from '../services/api'
 
 export function RadioProvider({ children }: { children: ReactNode }) {
+  const { notify } = useToast()
   const [currentStation, setCurrentStation] = useState<Station | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolumeState] = useState(0.7)
@@ -17,10 +19,16 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   // Segundos restantes del sleep timer; null = inactivo
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [favorites, setFavorites] = useState<Station[]>([])
+  const [playbackError, setPlaybackError] = useState(false)
+  const [favoritesError, setFavoritesError] = useState(false)
   const [currentUser, setCurrentUserState] = useState<string | null>(
     () => localStorage.getItem('currentUser')
   )
   const audioRef = useRef<HTMLAudioElement>(null)
+  // Espejo de la emisora en emisión: el listener 'error' del <audio> se
+  // registra una vez y necesita el nombre de la emisora actual en el momento
+  // exacto del fallo, sin depender de closures viejas.
+  const stationNameRef = useRef<string | null>(null)
 
   const setCurrentUser = useCallback((username: string | null) => {
     setCurrentUserState(username)
@@ -45,6 +53,8 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     const url = station.url_resolved || station.url
     if (!url) return
 
+    stationNameRef.current = station.name
+    setPlaybackError(false)
     audio.src = getProxyStreamUrl(url)
     audio.load()
     audio.play().catch(() => setIsPlaying(false))
@@ -60,6 +70,8 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         if (isPlaying) {
           pause()
         } else {
+          // Reintento de una emisora que ya sonaba: si el stream sigue
+          // caído, el evento 'error' del <audio> se encarga del aviso.
           audio.play().catch(() => {})
         }
       } else {
@@ -76,6 +88,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     if (isPlaying) {
       pause()
     } else {
+      // Mismo caso que play(): el fallo llega vía evento 'error'
       audio.play().catch(() => {})
     }
   }, [currentStation, isPlaying, pause])
@@ -97,10 +110,15 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     try {
       const data = await getFavorites()
       setFavorites(data)
+      setFavoritesError(false)
     } catch {
-      // Silently fail — favorites are not critical
+      // Sin la lista no hay favoritos que mostrar: el estado de error lleva
+      // el "Reintentar" en la vista; el aviso cubre al usuario que no está
+      // mirando la vista de favoritos.
+      setFavoritesError(true)
+      notify('No se pudieron cargar tus favoritos. Revisa tu conexión.')
     }
-  }, [])
+  }, [notify])
 
   const toggleFavorite = useCallback(async (station: Station) => {
     const exists = favorites.some(fav => fav.id === station.id)
@@ -112,10 +130,13 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         const added = await addFavorite(station)
         setFavorites(prev => [...prev, added])
       }
+      setFavoritesError(false)
     } catch {
-      // Silently fail
+      // El corazón no cambia (el estado solo se actualiza tras confirmar el
+      // servidor); el aviso explica por qué el clic "no hizo nada".
+      notify('No se pudo actualizar favoritos. Revisa tu conexión e inténtalo de nuevo.')
     }
-  }, [favorites])
+  }, [favorites, notify])
 
   // Load favorites on mount (page refresh)
   useEffect(() => {
@@ -139,6 +160,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     const onPlay = () => {
       setIsPlaying(true)
       setIsLoading(false)
+      setPlaybackError(false)
     }
     const onPause = () => setIsPlaying(false)
     const onWaiting = () => setIsLoading(true)
@@ -147,6 +169,19 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     const onError = () => {
       setIsPlaying(false)
       setIsLoading(false)
+      // clearAll vacía el src: ese load() no es un fallo de señal
+      const src = audio.getAttribute('src')
+      // Cambiar de emisora aborta la carga anterior; un aborto no es un fallo
+      if (audio.error && audio.error.code === MediaError.MEDIA_ERR_ABORTED) return
+      if (!src) return
+      setPlaybackError(true)
+      // Los nombres de Radio Browser traen tabuladores/espacios de sobra
+      const name = stationNameRef.current?.trim()
+      notify(
+        name
+          ? `Se perdió la señal de «${name}». Prueba de nuevo o elige otra emisora.`
+          : 'Se perdió la señal. Prueba de nuevo o elige otra emisora.',
+      )
     }
 
     audio.addEventListener('play', onPlay)
@@ -164,7 +199,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener('ended', onEnded)
       audio.removeEventListener('error', onError)
     }
-  }, [])
+  }, [notify])
 
   // Cuenta atrás del sleep timer: resta 1 cada segundo mientras esté activo.
   // El efecto se recrea en cada tick de timeLeft para que el primer segundo
@@ -214,10 +249,13 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       audio.load()
     }
     setCurrentStation(null)
+    stationNameRef.current = null
     setIsPlaying(false)
     setIsLoading(false)
     setTimeLeft(null)
     setFavorites([])
+    setPlaybackError(false)
+    setFavoritesError(false)
     setCurrentUser(null)
   }, [setCurrentUser])
 
@@ -238,6 +276,8 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         timeLeft,
         favorites,
         currentUser,
+        playbackError,
+        favoritesError,
         play,
         pause,
         togglePlay,
@@ -254,4 +294,3 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     </RadioContext.Provider>
   )
 }
-
