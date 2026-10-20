@@ -5,13 +5,15 @@ import { isBlockedByDns } from '../utils/urlSecurity.js'
 const router = Router()
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
-const TIMEOUT_MS = 10000
+// Timeout de conexión en ms (solo cabeceras en proxy-stream).
+// Configurable con PROXY_TIMEOUT_MS para que los tests no tarden 10 s.
+const TIMEOUT_MS = Number(process.env.PROXY_TIMEOUT_MS) || 10000
 // User-Agent de navegador: CDNs de favicons bloquean el UA por defecto de
 // fetch ("undici"), lo que provocaba 404 upstream innecesarios.
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 
-function fetchWithRedirects(url, maxRedirects = 3) {
+function fetchWithRedirects(url, { maxRedirects = 3, signal } = {}) {
   return new Promise((resolve, reject) => {
     const visit = async (currentUrl, redirectsLeft) => {
       if (await isBlockedByDns(currentUrl)) {
@@ -23,7 +25,7 @@ function fetchWithRedirects(url, maxRedirects = 3) {
         response = await fetch(currentUrl, {
           redirect: 'manual',
           headers: { 'User-Agent': USER_AGENT },
-          signal: AbortSignal.timeout(TIMEOUT_MS),
+          signal,
         })
       } catch (err) {
         return reject(err)
@@ -53,7 +55,8 @@ router.get('/proxy-image', async (req, res) => {
   }
 
   try {
-    const response = await fetchWithRedirects(url)
+    // Para imágenes el timeout cubre la petición completa (se bufferea entera)
+    const response = await fetchWithRedirects(url, { signal: AbortSignal.timeout(TIMEOUT_MS) })
     if (!response.ok) {
       // El upstream respondió: si falla (5xx) -> 502 Bad Gateway;
       // si el recurso no existe (404 etc.) se reenvía el estado real.
@@ -90,8 +93,20 @@ router.get('/proxy-stream', async (req, res) => {
     return res.status(400).json({ error: 'url es requerida' })
   }
 
+  // El timeout solo cubre la conexión inicial (cabeceras): el cuerpo de un
+  // stream de audio dura horas. Antes usábamos AbortSignal.timeout sobre el
+  // body completo: a los 10 s la transmisión se abortaba y su TimeoutError,
+  // emitido en el Readable sin listener, tumbaba el proceso entero
+  // (unhandled 'error' event -> backend caído hasta reiniciarlo a mano).
+  const controller = new AbortController()
+  const timer = setTimeout(
+    () => controller.abort(new DOMException('Timeout de conexión', 'TimeoutError')),
+    TIMEOUT_MS,
+  )
+
   try {
-    const response = await fetchWithRedirects(url)
+    const response = await fetchWithRedirects(url, { signal: controller.signal })
+    clearTimeout(timer)
     if (!response.ok) {
       await response.body?.cancel()
       if (response.status >= 500) {
@@ -102,8 +117,21 @@ router.get('/proxy-stream', async (req, res) => {
 
     res.set('Content-Type', response.headers.get('content-type') || 'audio/mpeg')
 
-    Readable.fromWeb(response.body).pipe(res)
+    const stream = Readable.fromWeb(response.body)
+    // Error del origen en mitad del stream (timeout, corte de red): cerrar la
+    // respuesta. Sin este listener el 'error' era sin handler y mataba Node.
+    stream.on('error', () => {
+      if (res.headersSent) {
+        res.destroy()
+      } else if (!res.writableEnded) {
+        res.status(502).json({ error: 'El stream de origen se interrumpió' })
+      }
+    })
+    // Cliente desconectado (pausa/cambio de emisora): cerrar el stream de origen.
+    res.on('close', () => stream.destroy())
+    stream.pipe(res)
   } catch (err) {
+    clearTimeout(timer)
     if (!res.headersSent) {
       if (err.message === 'URL no permitida') {
         res.status(400).json({ error: err.message })

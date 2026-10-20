@@ -29,6 +29,10 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showGuestModal, setShowGuestModal] = useState(false)
+  // Controller de la última petición de búsqueda (o carga inicial): con
+  // peticiones concurrentes, la respuesta más vieja podía llegar la última
+  // y sobrescribir resultados más recientes. Patrón "última petición gana".
+  const searchAbortRef = useRef<AbortController | null>(null)
 
   const isAuthenticated = !!token
 
@@ -47,16 +51,29 @@ function App() {
   }
 
   async function handleSearch(filters: SearchFilters) {
+    // Cancela cualquier búsqueda (o carga inicial) aún en vuelo.
+    searchAbortRef.current?.abort()
+    const controller = new AbortController()
+    searchAbortRef.current = controller
+
     setLoading(true)
     setError(null)
     try {
-      const data = await searchStations(filters)
+      const data = await searchStations(filters, controller.signal)
       setStations(data)
     } catch (err) {
+      // Cancelación propia: no es un error y no se tocan estados.
+      // (el return salta el setError/setStations; el finally está blindado abajo)
+      if (err instanceof Error && err.name === 'AbortError') return
       setError(err instanceof Error ? err.message : 'Error al buscar emisoras')
       setStations([])
     } finally {
-      setLoading(false)
+      // Solo apaga el spinner si esta sigue siendo la última petición:
+      // una petición abortada por una más reciente no debe tocar el estado,
+      // porque la nueva ya encendió el suyo.
+      if (searchAbortRef.current === controller) {
+        setLoading(false)
+      }
     }
   }
 
@@ -66,28 +83,44 @@ function App() {
     if (initialLoadDone.current) return
     initialLoadDone.current = true
 
+    // Mismo canal de cancelación que handleSearch: si el usuario busca antes
+    // de que termine esta carga inicial, handleSearch abortará esta petición
+    // y esta no alterará estados (guard por identidad de controller).
+    const controller = new AbortController()
+    searchAbortRef.current = controller
+
     async function loadInitial() {
       setLoading(true)
       try {
-        const data = await searchStations({})
-        setStations(shuffle(data))
-      } catch {
-        // silently fail on initial load
+        const data = await searchStations({}, controller.signal)
+        if (searchAbortRef.current === controller) {
+          setStations(shuffle(data))
+        }
+      } catch (err) {
+        // Cancelada por una búsqueda del usuario o fallo de red: en silencio
+        if (err instanceof Error && err.name === 'AbortError') return
       } finally {
-        setLoading(false)
+        if (searchAbortRef.current === controller) {
+          setLoading(false)
+        }
       }
     }
     loadInitial()
   }, [])
 
-  const sessionChecked = useRef(false)
+  // Última validación de sesión "gana" (mismo patrón que la búsqueda): si el
+  // usuario cierra sesión mientras validateToken está en vuelta, la respuesta
+  // tardía no debe resucitar el currentUser ya borrado. El efecto depende de
+  // `token` (fuente de verdad), no de un guard por ref que lo dejaba muerto.
+  const sessionCheckRef = useRef(0)
 
   useEffect(() => {
-    if (sessionChecked.current) return
-    sessionChecked.current = true
+    // Invalida cualquier validación anterior; también se invalida al cerrar
+    // sesión (token → null), que es justo cuando una respuesta tardía daña.
+    const checkId = ++sessionCheckRef.current
+    if (!token) return
 
-    if (!isAuthenticated) return
-
+    // Usuario optimista desde localStorage mientras se confirma el token
     const storedUser = localStorage.getItem('currentUser')
     if (storedUser) {
       setCurrentUser(storedUser)
@@ -96,15 +129,17 @@ function App() {
 
     validateToken()
       .then(({ user }) => {
+        if (sessionCheckRef.current !== checkId) return // respuesta desactualizada
         setCurrentUser(user.username)
         fetchFavorites()
       })
       .catch(() => {
+        if (sessionCheckRef.current !== checkId) return // respuesta desactualizada
         clearAll()
         localStorage.removeItem('token')
         setToken(null)
       })
-  }, [setCurrentUser, fetchFavorites, clearAll, isAuthenticated])
+  }, [token, setCurrentUser, fetchFavorites, clearAll])
 
   if (!isAuthenticated && view === 'auth') {
     return <Auth onLoginSuccess={handleLoginSuccess} onBackToHome={() => setView('home')} />

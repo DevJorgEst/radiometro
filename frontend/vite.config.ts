@@ -48,13 +48,17 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            // Rutas sensibles: NUNCA se cachean. Workbox identifica la caché
-            // solo por URL e ignora la cabecera Authorization; con NetworkFirst
-            // los favoritos/GET de auth de un usuario podían servirse a otro
-            // tras cerrar sesión (fuga de privacidad en el mismo navegador).
-            // Ojo: /api/favorites se llama SIN barra final -> el patrón debe
-            // cubrir tanto '/api/favorites' como '/api/favorites/<id>'.
-            urlPattern: /^https?:\/\/.*\/api\/(auth|favorites)(\/|\?|$)/i,
+            // Rutas que NUNCA se cachean:
+            // - auth/favorites: Workbox identifica la caché solo por URL e
+            //   ignora la cabecera Authorization; con NetworkFirst los
+            //   favoritos/GET de auth de un usuario podían servirse a otro
+            //   tras cerrar sesión (fuga de privacidad en el mismo navegador).
+            // - proxy-stream: respuestas de audio infinitas; cache.put() sobre
+            //   un stream falla (Cache.put network error) y NetworkFirst
+            //   respondía no-response al <audio>, rompiendo la reproducción.
+            // Ojo: se llaman SIN barra final -> el patrón debe cubrir
+            // '/api/x', '/api/x?query' y '/api/x/<id>'.
+            urlPattern: /^https?:\/\/.*\/api\/(auth|favorites|proxy-stream)(\/|\?|$)/i,
             handler: 'NetworkOnly',
           },
           {
