@@ -13,6 +13,10 @@ export interface RadioContextValue {
   timeLeft: number | null
   favorites: Station[]
   currentUser: string | null
+  /** true si el último intento de reproducción falló (stream caído) */
+  playbackError: boolean
+  /** true si la última carga de la lista de favoritos falló */
+  favoritesError: boolean
   play: (station: Station) => void
   pause: () => void
   togglePlay: () => void
