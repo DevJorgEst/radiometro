@@ -108,14 +108,19 @@ function App() {
     loadInitial()
   }, [])
 
-  const sessionChecked = useRef(false)
+  // Última validación de sesión "gana" (mismo patrón que la búsqueda): si el
+  // usuario cierra sesión mientras validateToken está en vuelta, la respuesta
+  // tardía no debe resucitar el currentUser ya borrado. El efecto depende de
+  // `token` (fuente de verdad), no de un guard por ref que lo dejaba muerto.
+  const sessionCheckRef = useRef(0)
 
   useEffect(() => {
-    if (sessionChecked.current) return
-    sessionChecked.current = true
+    // Invalida cualquier validación anterior; también se invalida al cerrar
+    // sesión (token → null), que es justo cuando una respuesta tardía daña.
+    const checkId = ++sessionCheckRef.current
+    if (!token) return
 
-    if (!isAuthenticated) return
-
+    // Usuario optimista desde localStorage mientras se confirma el token
     const storedUser = localStorage.getItem('currentUser')
     if (storedUser) {
       setCurrentUser(storedUser)
@@ -124,15 +129,17 @@ function App() {
 
     validateToken()
       .then(({ user }) => {
+        if (sessionCheckRef.current !== checkId) return // respuesta desactualizada
         setCurrentUser(user.username)
         fetchFavorites()
       })
       .catch(() => {
+        if (sessionCheckRef.current !== checkId) return // respuesta desactualizada
         clearAll()
         localStorage.removeItem('token')
         setToken(null)
       })
-  }, [setCurrentUser, fetchFavorites, clearAll, isAuthenticated])
+  }, [token, setCurrentUser, fetchFavorites, clearAll])
 
   if (!isAuthenticated && view === 'auth') {
     return <Auth onLoginSuccess={handleLoginSuccess} onBackToHome={() => setView('home')} />
