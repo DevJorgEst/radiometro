@@ -5,9 +5,13 @@ import { authMiddleware } from '../middlewares/authMiddleware.js'
 
 const router = Router()
 
+// Límite configurable por entorno, mismo patrón que PROXY_TIMEOUT_MS: en
+// producción (sin la variable) se mantiene en 10 intentos cada 15 minutos.
+const AUTH_RATE_LIMIT = Number(process.env.AUTH_RATE_LIMIT) || 10
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: AUTH_RATE_LIMIT,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Demasiados intentos. Inténtalo de nuevo en unos minutos.' },
