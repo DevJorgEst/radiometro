@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ToastProvider } from './ToastContext'
 import ToastHost from '../components/Toast'
@@ -26,8 +26,10 @@ function Probe() {
     favorites,
     playbackError,
     favoritesError,
+    timeLeft,
     toggleFavorite,
     togglePlay,
+    setSleepTimer,
     play,
   } = useRadio()
   return (
@@ -37,6 +39,9 @@ function Probe() {
       <span data-testid="favs">{favorites.length}</span>
       <span data-testid="playback-error">{playbackError ? 'true' : 'false'}</span>
       <span data-testid="favorites-error">{favoritesError ? 'true' : 'false'}</span>
+      <span data-testid="time-left">{timeLeft === null ? 'null' : timeLeft}</span>
+      <button onClick={() => setSleepTimer(15)}>timer-15</button>
+      <button onClick={() => setSleepTimer(null)}>timer-off</button>
       <button onClick={() => toggleFavorite(station)}>fav</button>
       <button onClick={() => play(station)}>emitir</button>
       <button onClick={togglePlay}>play</button>
@@ -161,5 +166,58 @@ describe('RadioContext', () => {
     const audio = document.querySelector('audio')!
     fireEvent(audio, new Event('error'))
     expect(screen.getByTestId('playback-error').textContent).toBe('false')
+  })
+
+  describe('persistencia del sleep timer', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('guarda el instante de apagado, no los segundos restantes', () => {
+      renderProbe()
+      fireEvent.click(screen.getByText('timer-15'))
+
+      const stored = Number(localStorage.getItem('sleepTimerEndsAt'))
+      expect(stored).toBe(new Date('2026-01-01T00:00:00Z').getTime() + 15 * 60 * 1000)
+    })
+
+    it('restaura el tiempo que realmente queda tras recargar', () => {
+      localStorage.setItem('sleepTimerEndsAt', String(Date.now() + 5 * 60 * 1000))
+
+      renderProbe()
+
+      expect(screen.getByTestId('time-left').textContent).toBe(String(5 * 60))
+    })
+
+    it('descarta y limpia un temporizador ya vencido', () => {
+      localStorage.setItem('sleepTimerEndsAt', String(Date.now() - 1000))
+
+      renderProbe()
+
+      expect(screen.getByTestId('time-left').textContent).toBe('null')
+      expect(localStorage.getItem('sleepTimerEndsAt')).toBeNull()
+    })
+
+    it('ignora un valor corrupto en localStorage', () => {
+      localStorage.setItem('sleepTimerEndsAt', 'no-es-un-numero')
+
+      renderProbe()
+
+      expect(screen.getByTestId('time-left').textContent).toBe('null')
+    })
+
+    it('cancelar el temporizador borra el instante persistido', () => {
+      renderProbe()
+      fireEvent.click(screen.getByText('timer-15'))
+      expect(localStorage.getItem('sleepTimerEndsAt')).not.toBeNull()
+
+      fireEvent.click(screen.getByText('timer-off'))
+      expect(localStorage.getItem('sleepTimerEndsAt')).toBeNull()
+    })
   })
 })
