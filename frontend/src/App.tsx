@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRadio } from './context/radio-context'
 import Layout from './components/Layout'
 import Auth from './views/Auth'
@@ -33,6 +33,9 @@ function App() {
   // peticiones concurrentes, la respuesta más vieja podía llegar la última
   // y sobrescribir resultados más recientes. Patrón "última petición gana".
   const searchAbortRef = useRef<AbortController | null>(null)
+  // Últimos filtros usados: el "Reintentar" del error repite la petición que
+  // falló (la inicial si el usuario nunca buscó).
+  const lastSearchRef = useRef<SearchFilters | null>(null)
 
   const isAuthenticated = !!token
 
@@ -51,6 +54,7 @@ function App() {
   }
 
   async function handleSearch(filters: SearchFilters) {
+    lastSearchRef.current = filters
     // Cancela cualquier búsqueda (o carga inicial) aún en vuelo.
     searchAbortRef.current?.abort()
     const controller = new AbortController()
@@ -65,7 +69,13 @@ function App() {
       // Cancelación propia: no es un error y no se tocan estados.
       // (el return salta el setError/setStations; el finally está blindado abajo)
       if (err instanceof Error && err.name === 'AbortError') return
-      setError(err instanceof Error ? err.message : 'Error al buscar emisoras')
+      // "Error 504: ..." viene del servidor; cualquier otra cosa es un fallo
+      // de red (fetch rechazado) y se nombra como lo que el usuario vive.
+      setError(
+        err instanceof Error && /^Error \d/.test(err.message)
+          ? err.message
+          : 'No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.',
+      )
       setStations([])
     } finally {
       // Solo apaga el spinner si esta sigue siendo la última petición:
@@ -77,36 +87,44 @@ function App() {
     }
   }
 
+  // Carga inicial del catálogo, también accesible como reintento cuando
+  // falla: el estado vacío "Busca una emisora" mintía tras un fallo de red.
+  const loadInitialData = useCallback(async () => {
+    // Mismo canal de cancelación que handleSearch: si el usuario busca antes
+    // de que termine esta carga inicial, handleSearch abortará esta petición
+    // y esta no alterará estados (guard por identidad de controller).
+    searchAbortRef.current?.abort()
+    const controller = new AbortController()
+    searchAbortRef.current = controller
+
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await searchStations({}, controller.signal)
+      if (searchAbortRef.current === controller) {
+        setStations(shuffle(data))
+      }
+    } catch (err) {
+      // Cancelada por una búsqueda del usuario: no es un error
+      if (err instanceof Error && err.name === 'AbortError') return
+      if (searchAbortRef.current === controller) {
+        setError('No se pudieron cargar las emisoras. Revisa tu conexión.')
+        setStations([])
+      }
+    } finally {
+      if (searchAbortRef.current === controller) {
+        setLoading(false)
+      }
+    }
+  }, [])
+
   const initialLoadDone = useRef(false)
 
   useEffect(() => {
     if (initialLoadDone.current) return
     initialLoadDone.current = true
-
-    // Mismo canal de cancelación que handleSearch: si el usuario busca antes
-    // de que termine esta carga inicial, handleSearch abortará esta petición
-    // y esta no alterará estados (guard por identidad de controller).
-    const controller = new AbortController()
-    searchAbortRef.current = controller
-
-    async function loadInitial() {
-      setLoading(true)
-      try {
-        const data = await searchStations({}, controller.signal)
-        if (searchAbortRef.current === controller) {
-          setStations(shuffle(data))
-        }
-      } catch (err) {
-        // Cancelada por una búsqueda del usuario o fallo de red: en silencio
-        if (err instanceof Error && err.name === 'AbortError') return
-      } finally {
-        if (searchAbortRef.current === controller) {
-          setLoading(false)
-        }
-      }
-    }
-    loadInitial()
-  }, [])
+    loadInitialData()
+  }, [loadInitialData])
 
   // Última validación de sesión "gana" (mismo patrón que la búsqueda): si el
   // usuario cierra sesión mientras validateToken está en vuelta, la respuesta
@@ -173,7 +191,20 @@ function App() {
               )}
 
               {error && (
-                <p className="py-12 text-center text-sm text-red-400">{error}</p>
+                <div className="flex flex-col items-center gap-4 py-12 text-center">
+                  <p className="max-w-sm text-sm text-red-400">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      lastSearchRef.current
+                        ? handleSearch(lastSearchRef.current)
+                        : loadInitialData()
+                    }
+                    className="cursor-pointer rounded-full bg-white px-5 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200"
+                  >
+                    Reintentar
+                  </button>
+                </div>
               )}
 
               {!loading && !error && stations.length === 0 && (

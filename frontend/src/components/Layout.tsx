@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import Sidebar from './Sidebar'
+import ToastHost from './Toast'
 import BottomNav from './BottomNav'
 import PlayerBar from './PlayerBar'
 
@@ -36,6 +37,7 @@ export default function Layout({
         <main className="flex-1 pb-48 md:pb-32">
           {children}
         </main>
+        <ToastHost />
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-slate-900 border-t border-slate-800 md:left-64">
