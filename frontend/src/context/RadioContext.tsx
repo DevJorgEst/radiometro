@@ -10,14 +10,35 @@ import { useToast } from './toast-context'
 import { getFavorites, addFavorite, removeFavorite, getProxyStreamUrl } from '../services/api'
 import type { Station } from '../services/api'
 
+const SLEEP_TIMER_KEY = 'sleepTimerEndsAt'
+
+// El temporizador se guarda como instante de apagado (epoch ms), no como
+// segundos restantes: así el tiempo sigue corriendo mientras la pestaña está
+// cerrada y al volver se restaura lo que de verdad queda, no una cuenta
+// reiniciada. Un temporizador ya vencido no se restaura.
+function readPersistedTimerEnd(): number | null {
+  const raw = localStorage.getItem(SLEEP_TIMER_KEY)
+  if (!raw) return null
+  const endsAt = Number(raw)
+  if (!Number.isFinite(endsAt) || endsAt <= Date.now()) {
+    localStorage.removeItem(SLEEP_TIMER_KEY)
+    return null
+  }
+  return endsAt
+}
+
 export function RadioProvider({ children }: { children: ReactNode }) {
   const { notify } = useToast()
   const [currentStation, setCurrentStation] = useState<Station | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolumeState] = useState(0.7)
   const [isLoading, setIsLoading] = useState(false)
-  // Segundos restantes del sleep timer; null = inactivo
-  const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  // Segundos restantes del sleep timer; null = inactivo. Al montar se
+  // reanuda el temporizador persistido con el tiempo que realmente queda.
+  const [timeLeft, setTimeLeft] = useState<number | null>(() => {
+    const endsAt = readPersistedTimerEnd()
+    return endsAt === null ? null : Math.round((endsAt - Date.now()) / 1000)
+  })
   const [favorites, setFavorites] = useState<Station[]>([])
   const [playbackError, setPlaybackError] = useState(false)
   const [favoritesError, setFavoritesError] = useState(false)
@@ -45,6 +66,16 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     audioRef.current?.pause()
     setTimeLeft(null)
   }, [])
+
+  // Persistencia del temporizador: cada cambio de segundos restantes reescribe
+  // el instante de apagado; al desactivarse o llegar a 0 se borra la clave.
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) {
+      localStorage.removeItem(SLEEP_TIMER_KEY)
+      return
+    }
+    localStorage.setItem(SLEEP_TIMER_KEY, String(Date.now() + timeLeft * 1000))
+  }, [timeLeft])
 
   // Switch to a new station: update src and play
   const switchStation = useCallback((station: Station) => {
@@ -256,6 +287,9 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     setFavorites([])
     setPlaybackError(false)
     setFavoritesError(false)
+    // Al cerrar sesión el temporizador persistido también se va; cerrar la
+    // pestaña, en cambio, lo conserva a propósito.
+    localStorage.removeItem(SLEEP_TIMER_KEY)
     setCurrentUser(null)
   }, [setCurrentUser])
 
