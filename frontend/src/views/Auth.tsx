@@ -41,47 +41,70 @@ export default function Auth({ onLoginSuccess, onBackToHome }: AuthProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/50 p-8 shadow-xl backdrop-blur">
+    <div className="flex min-h-dvh items-center justify-center bg-ground p-4 text-ink">
+      <div className="relative w-full max-w-md rounded-card border border-line bg-surface p-8">
         {onBackToHome && (
           <button
             type="button"
             onClick={onBackToHome}
-            className="absolute right-4 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-800 hover:text-white"
-            aria-label="Volver al inicio"
+            className="absolute right-4 top-4 cursor-pointer rounded-control px-2 py-1 text-body text-muted transition-colors hover:text-ink"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-            </svg>
+            Volver
           </button>
         )}
-        <div className="mb-8 text-center">
-          <img src={logo} alt="" className="mx-auto mb-4 h-16 w-16 rounded-full object-cover" />
-          <h1 className="text-2xl font-bold">Radiometro</h1>
-          <p className="mt-1 text-sm text-slate-400">
+
+        <div className="mb-8 flex flex-col items-center">
+          <img
+            src={logo}
+            alt=""
+            width={56}
+            height={56}
+            className="mb-4 h-14 w-14 object-contain"
+            style={{ imageRendering: 'pixelated' }}
+          />
+          <h1 className="text-title font-semibold text-ink">Radiometro</h1>
+          <p className="mt-1 text-body text-muted">
             {isRegisterMode ? 'Crea tu cuenta' : 'Inicia sesión'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Usuario"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="mb-4 w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:outline-none"
-          />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label htmlFor="username" className="mb-1 block text-small font-medium text-muted">
+              Usuario
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              placeholder="Usuario"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              aria-invalid={error ? true : undefined}
+              className="w-full rounded-control border border-line bg-ground p-3 text-[16px] text-ink placeholder:text-faint transition-colors hover:border-control md:text-body"
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mb-4 w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:outline-none"
-          />
+          <div>
+            <label htmlFor="password" className="mb-1 block text-small font-medium text-muted">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Contraseña"
+              autoComplete={isRegisterMode ? 'new-password' : 'current-password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              aria-invalid={error ? true : undefined}
+              className="w-full rounded-control border border-line bg-ground p-3 text-[16px] text-ink placeholder:text-faint transition-colors hover:border-control md:text-body"
+            />
+          </div>
 
           {error && (
-            <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-center text-sm text-red-400">
+            <p role="alert" className="rounded-control bg-negative/10 px-3 py-2 text-center text-body text-negative">
               {error}
             </p>
           )}
@@ -89,7 +112,7 @@ export default function Auth({ onLoginSuccess, onBackToHome }: AuthProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full cursor-pointer rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full cursor-pointer rounded-control bg-ink px-4 py-3 text-body font-medium text-ground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
             {loading ? 'Cargando…' : isRegisterMode ? 'Crear cuenta' : 'Iniciar sesión'}
           </button>
@@ -98,7 +121,7 @@ export default function Auth({ onLoginSuccess, onBackToHome }: AuthProps) {
         <button
           type="button"
           onClick={() => { setIsRegisterMode(!isRegisterMode); setError('') }}
-          className="mt-6 w-full cursor-pointer text-center text-sm text-slate-400 transition hover:text-white"
+          className="mt-6 w-full cursor-pointer text-center text-body text-muted transition-colors hover:text-ink"
         >
           {isRegisterMode
             ? '¿Ya tienes cuenta? Inicia sesión'

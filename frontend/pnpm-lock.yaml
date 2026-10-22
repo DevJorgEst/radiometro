@@ -54,9 +54,6 @@ importers:
       oxlint:
         specifier: ^1.71.0
         version: 1.73.0
-      postcss:
-        specifier: ^8.5.16
-        version: 8.5.16
       tailwindcss:
         specifier: ^4.3.2
         version: 4.3.2

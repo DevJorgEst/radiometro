@@ -30,19 +30,24 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
       return (
         <div
           role="alert"
-          className="flex min-h-screen flex-col items-center justify-center gap-5 bg-slate-900 px-6 text-center"
+          className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-ground px-6 text-center"
         >
-          <img src={logo} alt="" className="h-16 w-16 rounded-xl object-cover" />
+          <img
+            src={logo}
+            alt=""
+            className="h-16 w-16 object-contain"
+            style={{ imageRendering: 'pixelated' }}
+          />
           <div className="max-w-sm">
-            <h1 className="text-lg font-medium text-white">La aplicación encontró un problema</h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <h1 className="text-title font-semibold text-ink">La aplicación encontró un problema</h1>
+            <p className="mt-1 text-body text-muted">
               Tu sesión y tus favoritos siguen guardados. Recarga para continuar donde lo dejaste.
             </p>
           </div>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="cursor-pointer rounded-full bg-white px-5 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200"
+            className="cursor-pointer rounded-control bg-ink px-5 py-2 text-body font-medium text-ground transition-colors hover:bg-muted"
           >
             Recargar
           </button>

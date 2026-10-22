@@ -6,11 +6,11 @@ Radiometro es una aplicación web e instalable (PWA) de radio en streaming minim
 
 ## ✨ Características Principales
 
-- 🎨 **Diseño Premium Horizontal**: Interfaz minimalista en modo oscuro optimizada para una navegación fluida en PC y dispositivos móviles.
+- 🎨 **Interfaz sobria**: tema negro, una sola tipografía y el amarillo reservado al estado de reproducción; lista densa con búsqueda paginada y filtros por país, idioma y género.
 - 📱 **Progressive Web App (PWA)**: Totalmente instalable en iOS y Android, ejecutándose a pantalla completa y con estrategia de caché inteligente para rendimiento óptimo.
 - 🔐 **Autenticación Multiusuario**: Registro e inicio de sesión seguro mediante encriptación de contraseñas con `bcrypt` y sesiones controladas por tokens JWT.
 - 💾 **Persistencia con SQLite**: Base de datos relacional ligera integrada en el backend que aísla de forma estricta las emisoras favoritas de cada perfil en tiempo real.
-- 🛡️ **Robustez y Fallbacks**: Control automatizado de bloqueos CORS de servidores de streaming externos mediante imágenes de sustitución (*fallback*).
+- 🛡️ **Robustez y seguridad**: proxy de imágenes con lista blanca de tipos y tope de 5 MB, bloqueo de redes privadas (anti-SSRF) y respaldo cuando un favicon o un stream falla.
 
 ---
 
@@ -86,6 +86,7 @@ Configúralas en el panel de Render (servicio del backend):
 |---|---|---|
 | `JWT_SECRET` | ✅ | Secreto para firmar los tokens (generar con `openssl rand -base64 48`). El backend no arranca sin ella. |
 | `PORT` | ❌ | Puerto del servicio (Render lo inyecta automáticamente). |
+| `TRUST_PROXY` | ❌ | Nº de proxies de confianza delante del backend. En Render: `1`. Sin definir queda desactivado (no acepta `X-Forwarded-For`). |
 | `CORS_ORIGINS` | ❌ | Orígenes permitidos separados por coma. Para producción: `https://radiometro.render.com` |
 
 ### Variables de entorno del Frontend

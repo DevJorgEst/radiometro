@@ -2,7 +2,6 @@ import { getDb } from '../config/db.js'
 
 export async function getFavorites(req, res) {
   try {
-    console.log('Cargando favoritos para el usuario:', req.user.id)
     const db = await getDb()
     const favorites = await db.all(
       'SELECT stationuuid AS id, name, favicon, url_resolved AS url FROM favorites WHERE user_id = ?',
