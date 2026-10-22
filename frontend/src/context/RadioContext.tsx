@@ -5,12 +5,16 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
-import { RadioContext } from './radio-context'
+import { RadioContext, type StreamState } from './radio-context'
 import { useToast } from './toast-context'
 import { getFavorites, addFavorite, removeFavorite, getProxyStreamUrl } from '../services/api'
 import type { Station } from '../services/api'
 
 const SLEEP_TIMER_KEY = 'sleepTimerEndsAt'
+
+// Un stream que no arranca no puede quedarse en "Cargando..." para siempre:
+// tras este tiempo se nombra como fallo y se ofrece otra emisora.
+const CONNECT_TIMEOUT_MS = 15000
 
 // El temporizador se guarda como instante de apagado (epoch ms), no como
 // segundos restantes: así el tiempo sigue corriendo mientras la pestaña está
@@ -30,9 +34,8 @@ function readPersistedTimerEnd(): number | null {
 export function RadioProvider({ children }: { children: ReactNode }) {
   const { notify } = useToast()
   const [currentStation, setCurrentStation] = useState<Station | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [streamState, setStreamState] = useState<StreamState>('idle')
   const [volume, setVolumeState] = useState(0.7)
-  const [isLoading, setIsLoading] = useState(false)
   // Segundos restantes del sleep timer; null = inactivo. Al montar se
   // reanuda el temporizador persistido con el tiempo que realmente queda.
   const [timeLeft, setTimeLeft] = useState<number | null>(() => {
@@ -40,12 +43,15 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     return endsAt === null ? null : Math.round((endsAt - Date.now()) / 1000)
   })
   const [favorites, setFavorites] = useState<Station[]>([])
-  const [playbackError, setPlaybackError] = useState(false)
   const [favoritesError, setFavoritesError] = useState(false)
   const [currentUser, setCurrentUserState] = useState<string | null>(
     () => localStorage.getItem('currentUser')
   )
   const audioRef = useRef<HTMLAudioElement>(null)
+  // Derivados del estado del stream: una sola fuente de verdad.
+  const isPlaying = streamState === 'playing'
+  const isLoading = streamState === 'connecting'
+  const playbackError = streamState === 'error'
   // Espejo de la emisora en emisión: el listener 'error' del <audio> se
   // registra una vez y necesita el nombre de la emisora actual en el momento
   // exacto del fallo, sin depender de closures viejas.
@@ -85,11 +91,15 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     if (!url) return
 
     stationNameRef.current = station.name
-    setPlaybackError(false)
+    // "Conectando" es un estado real: el audio todavía no ha empezado.
+    setStreamState('connecting')
     audio.src = getProxyStreamUrl(url)
     audio.load()
-    audio.play().catch(() => setIsPlaying(false))
-    setIsPlaying(true)
+    audio.play().catch(() => {
+      // El navegador puede bloquear el arranque automático. No es un fallo de
+      // señal: el transporte queda listo para que el usuario pulse.
+      setStreamState((prev) => (prev === 'connecting' ? 'paused' : prev))
+    })
   }, [])
 
   const play = useCallback(
@@ -100,16 +110,25 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       if (currentStation?.id === station.id) {
         if (isPlaying) {
           pause()
-        } else {
-          // Reintento de una emisora que ya sonaba: si el stream sigue
-          // caído, el evento 'error' del <audio> se encarga del aviso.
-          audio.play().catch(() => {})
+          return
         }
+        if (streamState === 'error') {
+          // Reintento real: un stream caído se recarga antes de volver a
+          // intentarlo, si no el <audio> seguiría con el error guardado.
+          const url = station.url_resolved || station.url
+          if (!url) return
+          setStreamState('connecting')
+          audio.src = getProxyStreamUrl(url)
+          audio.load()
+          audio.play().catch(() => setStreamState('paused'))
+          return
+        }
+        audio.play().catch(() => {})
       } else {
         setCurrentStation(station)
       }
     },
-    [currentStation, isPlaying, pause],
+    [currentStation, isPlaying, pause, streamState],
   )
 
   const togglePlay = useCallback(() => {
@@ -188,24 +207,19 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     const audio = audioRef.current
     if (!audio) return
 
-    const onPlay = () => {
-      setIsPlaying(true)
-      setIsLoading(false)
-      setPlaybackError(false)
-    }
-    const onPause = () => setIsPlaying(false)
-    const onWaiting = () => setIsLoading(true)
-    const onCanPlay = () => setIsLoading(false)
-    const onEnded = () => setIsPlaying(false)
+    // "Sonando ahora" solo existe cuando el elemento de audio ha empezado a
+    // reproducir: el evento `play` es la fuente de verdad.
+    const onPlay = () => setStreamState('playing')
+    const onPause = () => setStreamState((prev) => (prev === 'error' ? prev : 'paused'))
+    const onWaiting = () => setStreamState((prev) => (prev === 'playing' ? 'connecting' : prev))
+    const onEnded = () => setStreamState('paused')
     const onError = () => {
-      setIsPlaying(false)
-      setIsLoading(false)
       // clearAll vacía el src: ese load() no es un fallo de señal
       const src = audio.getAttribute('src')
       // Cambiar de emisora aborta la carga anterior; un aborto no es un fallo
       if (audio.error && audio.error.code === MediaError.MEDIA_ERR_ABORTED) return
       if (!src) return
-      setPlaybackError(true)
+      setStreamState('error')
       // Los nombres de Radio Browser traen tabuladores/espacios de sobra
       const name = stationNameRef.current?.trim()
       notify(
@@ -218,7 +232,6 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     audio.addEventListener('play', onPlay)
     audio.addEventListener('pause', onPause)
     audio.addEventListener('waiting', onWaiting)
-    audio.addEventListener('canplay', onCanPlay)
     audio.addEventListener('ended', onEnded)
     audio.addEventListener('error', onError)
 
@@ -226,11 +239,31 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener('play', onPlay)
       audio.removeEventListener('pause', onPause)
       audio.removeEventListener('waiting', onWaiting)
-      audio.removeEventListener('canplay', onCanPlay)
       audio.removeEventListener('ended', onEnded)
       audio.removeEventListener('error', onError)
     }
   }, [notify])
+
+  // Vigilancia de la conexión: si el audio no arranca, se dice.
+  const streamStateRef = useRef(streamState)
+  useEffect(() => {
+    streamStateRef.current = streamState
+  }, [streamState])
+
+  useEffect(() => {
+    if (streamState !== 'connecting') return
+    const id = setTimeout(() => {
+      if (streamStateRef.current !== 'connecting') return
+      setStreamState('error')
+      const name = stationNameRef.current?.trim()
+      notify(
+        name
+          ? `«${name}» no ha respondido. Prueba con otra emisora.`
+          : 'La emisión no ha respondido. Prueba con otra emisora.',
+      )
+    }, CONNECT_TIMEOUT_MS)
+    return () => clearTimeout(id)
+  }, [streamState, notify])
 
   // Cuenta atrás del sleep timer: resta 1 cada segundo mientras esté activo.
   // El efecto se recrea en cada tick de timeLeft para que el primer segundo
@@ -281,11 +314,9 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     }
     setCurrentStation(null)
     stationNameRef.current = null
-    setIsPlaying(false)
-    setIsLoading(false)
+    setStreamState('idle')
     setTimeLeft(null)
     setFavorites([])
-    setPlaybackError(false)
     setFavoritesError(false)
     // Al cerrar sesión el temporizador persistido también se va; cerrar la
     // pestaña, en cambio, lo conserva a propósito.
@@ -304,6 +335,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     <RadioContext.Provider
       value={{
         currentStation,
+        streamState,
         isPlaying,
         volume,
         isLoading,

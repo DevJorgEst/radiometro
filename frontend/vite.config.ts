@@ -20,8 +20,8 @@ export default defineConfig({
         name: 'Radiometro',
         short_name: 'Radiometro',
         description: 'Reproductor de radio online',
-        theme_color: '#020617',
-        background_color: '#020617',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         start_url: '/',
         icons: [
@@ -36,10 +36,10 @@ export default defineConfig({
             type: 'image/png',
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/pwa-maskable-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'maskable',
           },
         ],
       },

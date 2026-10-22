@@ -31,3 +31,14 @@ AGENTS.md
 
 # Vite PWA Dev Directory
 frontend/dev-dist/
+
+# Carpetas de trabajo de las skills de diseño (dirección, inspección)
+.taste-skill/
+.impeccable/
+
+# Grafo de conocimiento local de graphify
+graphify-out/
+
+# Documentación interna de producto y diseño (no se publica)
+DESIGN.md
+PRODUCT.md

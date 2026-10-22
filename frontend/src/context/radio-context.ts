@@ -4,6 +4,13 @@ import type { Station } from '../services/api'
 // Módulo sin componentes React: aquí viven el contexto y el hook para que
 // RadioContext.tsx solo exporte el componente RadioProvider y Fast Refresh
 // (regla only-export-components) mantenga un límite de actualización limpio.
+/**
+ * Estado del stream, nombrado como lo vive el usuario. `connecting` existe
+ * porque "Cargando..." y "Sonando ahora" no son lo mismo: uno es una espera
+ * con salida, el otro es audio de verdad.
+ */
+export type StreamState = 'idle' | 'connecting' | 'playing' | 'paused' | 'error'
+
 export interface RadioContextValue {
   currentStation: Station | null
   isPlaying: boolean
@@ -13,6 +20,8 @@ export interface RadioContextValue {
   timeLeft: number | null
   favorites: Station[]
   currentUser: string | null
+  /** Estado del stream (idle | connecting | playing | paused | error) */
+  streamState: StreamState
   /** true si el último intento de reproducción falló (stream caído) */
   playbackError: boolean
   /** true si la última carga de la lista de favoritos falló */
