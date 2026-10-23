@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ToastProvider } from './context/ToastContext'
 import { RadioProvider } from './context/RadioContext'
@@ -56,6 +56,7 @@ describe('accesibilidad', () => {
     )
 
     await screen.findByText('Radio Uno')
+    expect(screen.getByRole('button', { name: 'Entrar' })).toBeTruthy()
     await expectNoA11yViolations(document.body)
   })
 

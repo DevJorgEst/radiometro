@@ -246,7 +246,6 @@ function App() {
                 type="button"
                 onClick={() => (isAuthenticated ? handleLogout() : setView('auth'))}
                 className="flex h-11 items-center gap-2 rounded-control px-2 text-body text-muted transition-colors hover:text-ink"
-                aria-label={isAuthenticated ? 'Cerrar sesión' : 'Iniciar sesión'}
               >
                 {isAuthenticated ? <LogOutIcon size={16} /> : <UserIcon size={16} />}
                 {isAuthenticated ? 'Salir' : 'Entrar'}
