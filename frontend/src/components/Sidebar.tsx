@@ -38,7 +38,7 @@ export default function Sidebar({
         <span className="text-section font-semibold text-ink">Radiometro</span>
       </div>
 
-      <nav aria-label="Secciones" className="flex flex-col gap-1">
+      <nav aria-label="Navegación principal" className="flex flex-col gap-1">
         {navItems.map(({ view, icon: Icon, label }) => {
           const active = currentView === view
           return (
