@@ -52,7 +52,7 @@ describe('PlayerBar', () => {
     expect(screen.getByText('Cargando...')).toBeTruthy()
 
     const audio = document.querySelector('audio')!
-    fireEvent(audio, new Event('play'))
+    fireEvent(audio, new Event('playing'))
 
     expect(screen.getByText('Sonando ahora')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Pausar' })).toBeTruthy()
