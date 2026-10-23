@@ -10,6 +10,7 @@ process.env.PROXY_TIMEOUT_MS = '250'
 const { default: app } = await import('../src/app.js')
 const { closeDb } = await import('../src/config/db.js')
 const { isBlockedUrl, isBlockedByDns } = await import('../src/utils/urlSecurity.js')
+const { safeLookup, isBlockedByConnector } = await import('../src/utils/safeFetch.js')
 
 let server
 let baseUrl
@@ -57,6 +58,120 @@ test('proxy-image rechaza localhost por nombre', async () => {
 test('proxy-image sin url devuelve 400', async () => {
   const res = await fetch(`${baseUrl}/api/proxy-image`)
   assert.equal(res.status, 400)
+})
+
+test('proxy-image rechaza contenido que no es imagen (415)', async (t) => {
+  const realFetch = globalThis.fetch.bind(globalThis)
+  t.mock.method(globalThis, 'fetch', (input, init) => {
+    if (String(input).startsWith('http://')) return realFetch(input, init)
+    return Promise.resolve(
+      new Response('<html><script>alert(1)</script></html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      }),
+    )
+  })
+
+  const res = await realFetch(`${baseUrl}/api/proxy-image?url=https://93.184.215.14/favicon.html`)
+  assert.equal(res.status, 415)
+})
+
+test('proxy-image rechaza sin descargar si el origen declara un tamaño excesivo (413)', async (t) => {
+  const realFetch = globalThis.fetch.bind(globalThis)
+  t.mock.method(globalThis, 'fetch', (input, init) => {
+    if (String(input).startsWith('http://')) return realFetch(input, init)
+    return Promise.resolve(
+      new Response(new Uint8Array(10), {
+        status: 200,
+        headers: {
+          'content-type': 'image/png',
+          'content-length': String(6 * 1024 * 1024),
+        },
+      }),
+    )
+  })
+
+  const res = await realFetch(`${baseUrl}/api/proxy-image?url=https://93.184.215.14/huge.png`)
+  assert.equal(res.status, 413)
+})
+
+test('proxy-image corta el cuerpo que miente sobre su tamaño (413, sin OOM)', async (t) => {
+  const realFetch = globalThis.fetch.bind(globalThis)
+  const chunk = new Uint8Array(64 * 1024)
+  const body = new ReadableStream({
+    start(controller) {
+      // 81 × 64 KB > 5 MB y sin content-length: el tope debe cortar al leer.
+      for (let i = 0; i < 81; i++) controller.enqueue(chunk)
+      controller.close()
+    },
+  })
+  t.mock.method(globalThis, 'fetch', (input, init) => {
+    if (String(input).startsWith('http://')) return realFetch(input, init)
+    return Promise.resolve(
+      new Response(body, { status: 200, headers: { 'content-type': 'image/png' } }),
+    )
+  })
+
+  const res = await realFetch(`${baseUrl}/api/proxy-image?url=https://93.184.215.14/big.png`)
+  assert.equal(res.status, 413)
+})
+
+// El conector es la comprobación autoritativa: aunque la validación previa
+// pase, la IP a la que se conecta se filtra aquí (mata el DNS rebinding).
+test('proxy-image entrega la imagen validada con nosniff', async (t) => {
+  const realFetch = globalThis.fetch.bind(globalThis)
+  const png = new Uint8Array([137, 80, 78, 71])
+  t.mock.method(globalThis, 'fetch', (input, init) => {
+    if (String(input).startsWith('http://')) return realFetch(input, init)
+    return Promise.resolve(
+      new Response(png, { status: 200, headers: { 'content-type': 'image/png' } }),
+    )
+  })
+
+  const res = await realFetch(`${baseUrl}/api/proxy-image?url=https://93.184.215.14/logo.png`)
+  assert.equal(res.status, 200)
+  assert.equal(res.headers.get('content-type'), 'image/png')
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff')
+  assert.equal((await res.arrayBuffer()).byteLength, 4)
+})
+
+test('proxy-stream rechaza HTML del origen (415, no XSS en el dominio de la API)', async (t) => {
+  const realFetch = globalThis.fetch.bind(globalThis)
+  t.mock.method(globalThis, 'fetch', (input, init) => {
+    if (String(input).startsWith('http://')) return realFetch(input, init)
+    return Promise.resolve(
+      new Response('<html>no soy audio</html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      }),
+    )
+  })
+
+  const res = await realFetch(`${baseUrl}/api/proxy-stream?url=https://93.184.215.14/notaudio`)
+  assert.equal(res.status, 415)
+})
+
+test('safeLookup bloquea una IP privada', (_t, done) => {
+  safeLookup('127.0.0.1', { all: true }, (err, addresses) => {
+    assert.ok(err instanceof Error)
+    assert.equal(err.message, 'URL no permitida')
+    assert.equal(addresses, undefined)
+    done()
+  })
+})
+
+test('safeLookup devuelve la IP pública validada', (_t, done) => {
+  safeLookup('93.184.215.14', { all: true }, (err, addresses) => {
+    assert.equal(err, null)
+    assert.deepEqual(addresses, [{ address: '93.184.215.14', family: 4 }])
+    done()
+  })
+})
+
+test('isBlockedByConnector reconoce el error envuelto por fetch', () => {
+  const wrapped = new TypeError('fetch failed', { cause: new Error('URL no permitida') })
+  assert.equal(isBlockedByConnector(wrapped), true)
+  assert.equal(isBlockedByConnector(new Error('otra cosa')), false)
 })
 
 test('proxy-stream rechaza IP privada (SSRF)', async () => {

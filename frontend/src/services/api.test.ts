@@ -39,13 +39,29 @@ describe('searchStations', () => {
 
   it('devuelve las emisoras recibidas de la API', async () => {
     const stations = [{ id: 'st-1', name: 'Radio Test' }]
+    const payload = { items: stations, hasMore: false }
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => stations,
+      json: async () => payload,
     })
 
     const result = await searchStations({ name: 'test' })
-    expect(result).toEqual(stations)
+    expect(result).toEqual(payload)
+  })
+
+  it('incluye limit y offset para la paginación', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [], hasMore: false }),
+    })
+    globalThis.fetch = mockFetch
+
+    await searchStations({ limit: 30, offset: 60, order: 'name' })
+
+    const url = mockFetch.mock.calls[0][0] as string
+    expect(url).toContain('limit=30')
+    expect(url).toContain('offset=60')
+    expect(url).toContain('order=name')
   })
 
   it('lanza error cuando la API responde con fallo', async () => {

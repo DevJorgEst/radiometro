@@ -45,6 +45,12 @@ function isPrivateIpv6(ip) {
   return false
 }
 
+// Una sola fuente de verdad para "esta IP no se toca". La usa la validación
+// previa y el `lookup` del conector (que es quien fija la IP real).
+export function isBlockedIp(ip) {
+  return net.isIP(ip) === 6 ? isPrivateIpv6(ip) : isPrivateIpv4(ip)
+}
+
 export function isBlockedUrl(rawUrl) {
   let url
   try {
@@ -84,5 +90,5 @@ export async function isBlockedByDns(rawUrl) {
   // Ni A ni AAAA: dominio inexistente/no resoluble -> bloqueo (fail-closed)
   if (addresses.length === 0) return true
 
-  return addresses.some((ip) => (net.isIP(ip) === 6 ? isPrivateIpv6(ip) : isPrivateIpv4(ip)))
+  return addresses.some((ip) => isBlockedIp(ip))
 }

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import Sidebar from './Sidebar'
 import ToastHost from './Toast'
-import BottomNav from './BottomNav'
 import PlayerBar from './PlayerBar'
 
 interface LayoutProps {
@@ -14,6 +13,10 @@ interface LayoutProps {
   onGuestFavoriteAttempt: () => void
 }
 
+/**
+ * El armazón: una columna que se desplaza, una barra lateral fija en
+ * escritorio y el reproductor anclado abajo. Nada más vive aquí.
+ */
 export default function Layout({
   children,
   currentView,
@@ -24,7 +27,7 @@ export default function Layout({
   onGuestFavoriteAttempt,
 }: LayoutProps) {
   return (
-    <div className="flex h-dvh overflow-hidden bg-slate-900 text-white">
+    <div className="flex h-dvh overflow-hidden bg-ground text-ink">
       <Sidebar
         currentView={currentView}
         onNavigate={onNavigate}
@@ -33,22 +36,13 @@ export default function Layout({
         onAuthRequest={onAuthRequest}
       />
 
-      <div className="flex flex-1 w-full flex-col overflow-y-auto bg-slate-950">
-        <main className="flex-1 pb-48 md:pb-32">
-          {children}
-        </main>
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <main className="flex-1 pb-32 md:pb-24">{children}</main>
         <ToastHost />
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-slate-900 border-t border-slate-800 md:left-64">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:left-56">
         <PlayerBar onGuestFavoriteAttempt={onGuestFavoriteAttempt} />
-        <BottomNav
-          currentView={currentView}
-          onNavigate={onNavigate}
-          onLogout={onLogout}
-          isAuthenticated={isAuthenticated}
-          onAuthRequest={onAuthRequest}
-        />
       </div>
     </div>
   )

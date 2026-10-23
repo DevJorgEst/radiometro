@@ -7,6 +7,13 @@ import proxyRoutes from './routes/proxy.routes.js'
 
 const app = express()
 
+// Render (y cualquier PaaS) pone un proxy delante: sin esto req.ip es el del
+// proxy y el rate limit de auth acaba compartido por todos los usuarios.
+// Desactivado por defecto para que un despliegue directo no acepte
+// X-Forwarded-For falsificado.
+const trustProxyHops = Number(process.env.TRUST_PROXY)
+if (trustProxyHops > 0) app.set('trust proxy', trustProxyHops)
+
 // Orígenes permitidos: defaults de desarrollo + CORS_ORIGINS (coma) + FRONTEND_URL.
 // Nunca se acepta un origen fuera de esta lista (sin bypass condicionado a env).
 const DEV_DEFAULT_ORIGINS = [

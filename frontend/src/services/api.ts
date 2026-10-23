@@ -31,16 +31,40 @@ export interface SearchFilters {
   country?: string
   language?: string
   tag?: string
+  /** Orden global del catálogo; se aplica en el servidor, no a la página cargada */
+  order?: 'votes' | 'name'
+  /** Máximo de emisoras por página (30 por defecto) */
+  limit?: number
+  /** Desplazamiento para cargar más resultados */
+  offset?: number
+}
+
+export interface SearchResult {
+  items: Station[]
+  /** true si el servidor tiene más resultados que los devueltos */
+  hasMore: boolean
+}
+
+export interface Country {
+  name: string
+  iso: string
+  stationcount: number
 }
 
 /* ── Stations ──────────────────────────────────────────── */
 
-export async function searchStations(filters: SearchFilters = {}, signal?: AbortSignal): Promise<Station[]> {
+export async function searchStations(
+  filters: SearchFilters = {},
+  signal?: AbortSignal,
+): Promise<SearchResult> {
   const params = new URLSearchParams()
   if (filters.name) params.set('name', filters.name)
   if (filters.country) params.set('country', filters.country)
   if (filters.language) params.set('language', filters.language)
   if (filters.tag) params.set('tag', filters.tag)
+  if (filters.order) params.set('order', filters.order)
+  if (filters.limit) params.set('limit', String(filters.limit))
+  if (filters.offset) params.set('offset', String(filters.offset))
 
   const qs = params.toString()
   const url = qs ? `${API_BASE}/stations/search?${qs}` : `${API_BASE}/stations/search`
@@ -50,6 +74,20 @@ export async function searchStations(filters: SearchFilters = {}, signal?: Abort
     throw new Error(`Error ${res.status}: ${res.statusText}`)
   }
   return res.json()
+}
+
+/**
+ * Vocabulario de países tal cual lo usa Radio Browser. La lista de la
+ * interfaz se construye con estos nombres para que el filtro nunca devuelva
+ * cero resultados por un país escrito de otra forma.
+ */
+export async function getCountries(signal?: AbortSignal): Promise<Country[]> {
+  const res = await fetch(`${API_BASE}/stations/countries`, { signal })
+  if (!res.ok) {
+    throw new Error(`Error ${res.status}: ${res.statusText}`)
+  }
+  const data = await res.json()
+  return Array.isArray(data?.items) ? data.items : []
 }
 
 /* ── Favorites (require auth) ──────────────────────────── */
