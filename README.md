@@ -76,7 +76,7 @@ Abre tu navegador en `http://localhost:5173` y ¡listo!
 
 ## 🌐 Producción (Render.com)
 
-El proyecto está desplegado en **https://radiometro.render.com**.
+El proyecto está desplegado en **https://radiometro.onrender.com**.
 
 ### Variables de entorno del Backend
 
@@ -87,7 +87,7 @@ Configúralas en el panel de Render (servicio del backend):
 | `JWT_SECRET` | ✅ | Secreto para firmar los tokens (generar con `openssl rand -base64 48`). El backend no arranca sin ella. |
 | `PORT` | ❌ | Puerto del servicio (Render lo inyecta automáticamente). |
 | `TRUST_PROXY` | ❌ | Nº de proxies de confianza delante del backend. En Render: `1`. Sin definir queda desactivado (no acepta `X-Forwarded-For`). |
-| `CORS_ORIGINS` | ❌ | Orígenes permitidos separados por coma. Para producción: `https://radiometro.render.com` |
+| `CORS_ORIGINS` | ❌ | Orígenes permitidos separados por coma. Para producción: `https://radiometro.onrender.com` |
 
 ### Variables de entorno del Frontend
 
@@ -95,9 +95,9 @@ En el build de producción del frontend (Render: campo *Build Command* o variabl
 
 | Variable | Descripción |
 |---|---|
-| `VITE_API_URL` | URL pública del backend, p. ej. `https://backend-tu-servicio.onrender.com` (sin `/api`). |
+| `VITE_API_URL` | URL pública del backend. En este proyecto: `https://radiometro-backend.onrender.com` (sin `/api`). |
 
-> **Importante:** la PWA sirve el frontend en `https://radiometro.render.com` y el backend debe estar publicado en **otro servicio** de Render con su propia URL pública.
+> **Importante:** la PWA sirve el frontend en `https://radiometro.onrender.com` y el backend debe estar publicado en **otro servicio** de Render con su propia URL pública.
 
 ---
 Desarrollado con ⚡ por DevJorgEst.
