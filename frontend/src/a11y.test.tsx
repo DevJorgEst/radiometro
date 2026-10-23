@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ToastProvider } from './context/ToastContext'
 import { RadioProvider } from './context/RadioContext'
-import { useRadio } from './context/radio-context'
+import { RadioContext, type RadioContextValue, useRadio } from './context/radio-context'
 import App from './App'
 import Auth from './views/Auth'
+import Favorites from './views/Favorites'
 import FilterBar from './components/FilterBar'
 import GuestFavoriteModal from './components/GuestFavoriteModal'
 import PlayerBar from './components/PlayerBar'
@@ -26,6 +27,31 @@ const realFetch = globalThis.fetch
 
 function json(body: unknown) {
   return Promise.resolve({ ok: true, json: async () => body } as Response)
+}
+
+function radioValue(overrides: Partial<RadioContextValue>): RadioContextValue {
+  return {
+    currentStation: null,
+    isPlaying: false,
+    volume: 0.8,
+    isLoading: false,
+    timeLeft: null,
+    favorites: [],
+    currentUser: null,
+    streamState: 'idle',
+    playbackError: false,
+    favoritesError: false,
+    play: vi.fn(),
+    pause: vi.fn(),
+    togglePlay: vi.fn(),
+    setVolume: vi.fn(),
+    setSleepTimer: vi.fn(),
+    toggleFavorite: vi.fn(),
+    clearAll: vi.fn(),
+    setCurrentUser: vi.fn(),
+    fetchFavorites: vi.fn(),
+    ...overrides,
+  }
 }
 
 beforeEach(() => {
@@ -102,6 +128,32 @@ describe('accesibilidad', () => {
     )
 
     fireEvent.click(screen.getByText('emitir'))
+    await expectNoA11yViolations(document.body)
+  })
+
+  it('la lista de favoritos no tiene violaciones', async () => {
+    render(
+      <ToastProvider>
+        <RadioContext.Provider value={radioValue({ favorites: [station], currentUser: 'jorge' })}>
+          <Favorites onExplore={vi.fn()} />
+        </RadioContext.Provider>
+      </ToastProvider>,
+    )
+
+    expect(screen.getByText('Radio Uno')).toBeTruthy()
+    await expectNoA11yViolations(document.body)
+  })
+
+  it('el error al cargar favoritos no tiene violaciones', async () => {
+    render(
+      <ToastProvider>
+        <RadioContext.Provider value={radioValue({ favoritesError: true })}>
+          <Favorites onExplore={vi.fn()} />
+        </RadioContext.Provider>
+      </ToastProvider>,
+    )
+
+    expect(screen.getByRole('alert')).toBeTruthy()
     await expectNoA11yViolations(document.body)
   })
 })
