@@ -60,6 +60,12 @@ app.get('/', (_req, res) => {
   res.json({ mensaje: 'Hola Mundo' })
 })
 
+// Sin dependencias: sirve para que un monitor externo mantenga despierto el
+// servicio en el plan gratuito de Render.
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' })
+})
+
 app.use('/api', radioRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/favorites', favoritesRoutes)

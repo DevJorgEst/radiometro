@@ -89,6 +89,8 @@ Configúralas en el panel de Render (servicio del backend):
 | `TRUST_PROXY` | ❌ | Nº de proxies de confianza delante del backend. En Render: `1`. Sin definir queda desactivado (no acepta `X-Forwarded-For`). |
 | `CORS_ORIGINS` | ❌ | Orígenes permitidos separados por coma. Para producción: `https://radiometro.onrender.com` |
 
+> **Persistencia:** en el plan gratuito de Render no hay disco persistente. La base SQLite vive en el filesystem efímero del servicio y se pierde en cada deploy o reinicio. Para conservar cuentas y favoritos hace falta un disco persistente o una base de datos externa.
+
 ### Variables de entorno del Frontend
 
 En el build de producción del frontend (Render: campo *Build Command* o variable de entorno en tiempo de build):
@@ -98,6 +100,14 @@ En el build de producción del frontend (Render: campo *Build Command* o variabl
 | `VITE_API_URL` | URL pública del backend. En este proyecto: `https://radiometro-backend.onrender.com` (sin `/api`). |
 
 > **Importante:** la PWA sirve el frontend en `https://radiometro.onrender.com` y el backend debe estar publicado en **otro servicio** de Render con su propia URL pública.
+
+### Mantener despierto el backend (plan gratuito)
+
+Render suspende el servicio tras unos 15 minutos sin tráfico, y la siguiente petición puede tardar 30-60 segundos. Para evitarlo, configura un monitor externo (UptimeRobot, cron-job.org) que haga `GET` a:
+
+`https://radiometro-backend.onrender.com/api/health`
+
+cada 10-14 minutos. El plan gratuito incluye 750 horas al mes; un servicio despierto 24/7 consume unas 730.
 
 ---
 Desarrollado con ⚡ por DevJorgEst.
