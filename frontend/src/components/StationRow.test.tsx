@@ -43,7 +43,7 @@ describe('StationRow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Reproducir Radio Uno' }))
     const audio = document.querySelector('audio')!
-    fireEvent(audio, new Event('play'))
+    fireEvent(audio, new Event('playing'))
 
     expect(screen.getByRole('button', { name: 'Pausar Radio Uno' })).toBeTruthy()
     expect(screen.getByText(/En directo/)).toBeTruthy()

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ToastProvider } from './ToastContext'
 import ToastHost from '../components/Toast'
 import { RadioProvider } from './RadioContext'
@@ -166,6 +166,80 @@ describe('RadioContext', () => {
     const audio = document.querySelector('audio')!
     fireEvent(audio, new Event('error'))
     expect(screen.getByTestId('playback-error').textContent).toBe('false')
+  })
+
+  describe('eventos del stream', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    function playStation() {
+      renderProbe()
+      fireEvent.click(screen.getByText('emitir'))
+      return document.querySelector('audio')!
+    }
+
+    it('un waiting durante el arranque no impide confirmar playing', () => {
+      const audio = playStation()
+
+      fireEvent(audio, new Event('play'))
+      fireEvent(audio, new Event('waiting'))
+      fireEvent(audio, new Event('playing'))
+
+      expect(screen.getByTestId('playing').textContent).toBe('true')
+
+      act(() => {
+        vi.advanceTimersByTime(30000)
+      })
+
+      expect(screen.getByTestId('playing').textContent).toBe('true')
+      expect(screen.getByTestId('playback-error').textContent).toBe('false')
+    })
+
+    it('un waiting durante la reproducción no pierde el estado', () => {
+      const audio = playStation()
+      fireEvent(audio, new Event('playing'))
+      Object.defineProperty(audio, 'currentTime', { value: 10, configurable: true })
+
+      fireEvent(audio, new Event('waiting'))
+
+      act(() => {
+        vi.advanceTimersByTime(30000)
+      })
+
+      expect(screen.getByTestId('playing').textContent).toBe('true')
+      expect(screen.getByTestId('playback-error').textContent).toBe('false')
+    })
+
+    it('el timeout no falla si el audio ya está sonando', () => {
+      const audio = playStation()
+      Object.defineProperty(audio, 'paused', { value: false, configurable: true })
+      Object.defineProperty(audio, 'currentTime', { value: 10, configurable: true })
+
+      act(() => {
+        vi.advanceTimersByTime(30000)
+      })
+
+      expect(screen.getByTestId('playing').textContent).toBe('true')
+      expect(screen.getByTestId('playback-error').textContent).toBe('false')
+    })
+
+    it('sin audio real, el timeout marca error y avisa', () => {
+      playStation()
+
+      act(() => {
+        vi.advanceTimersByTime(30000)
+      })
+
+      expect(screen.getByTestId('playback-error').textContent).toBe('true')
+      expect(
+        screen.getByText('«Radio Uno» no ha respondido. Prueba con otra emisora.'),
+      ).toBeTruthy()
+    })
   })
 
   describe('persistencia del sleep timer', () => {

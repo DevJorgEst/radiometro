@@ -13,8 +13,9 @@ import type { Station } from '../services/api'
 const SLEEP_TIMER_KEY = 'sleepTimerEndsAt'
 
 // Un stream que no arranca no puede quedarse en "Cargando..." para siempre:
-// tras este tiempo se nombra como fallo y se ofrece otra emisora.
-const CONNECT_TIMEOUT_MS = 15000
+// tras este tiempo se nombra como fallo y se ofrece otra emisora. 30 s deja
+// margen a los streams en vivo que tardan en llenar el búfer.
+const CONNECT_TIMEOUT_MS = 30000
 
 // El temporizador se guarda como instante de apagado (epoch ms), no como
 // segundos restantes: así el tiempo sigue corriendo mientras la pestaña está
@@ -208,10 +209,10 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     if (!audio) return
 
     // "Sonando ahora" solo existe cuando el elemento de audio ha empezado a
-    // reproducir: el evento `play` es la fuente de verdad.
-    const onPlay = () => setStreamState('playing')
+    // reproducir de verdad: `playing`, no `play`. `play` se dispara antes de
+    // tener datos; con él, un buffering parecía una conexión que nunca acaba.
+    const onPlaying = () => setStreamState('playing')
     const onPause = () => setStreamState((prev) => (prev === 'error' ? prev : 'paused'))
-    const onWaiting = () => setStreamState((prev) => (prev === 'playing' ? 'connecting' : prev))
     const onEnded = () => setStreamState('paused')
     const onError = () => {
       // clearAll vacía el src: ese load() no es un fallo de señal
@@ -229,16 +230,14 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       )
     }
 
-    audio.addEventListener('play', onPlay)
+    audio.addEventListener('playing', onPlaying)
     audio.addEventListener('pause', onPause)
-    audio.addEventListener('waiting', onWaiting)
     audio.addEventListener('ended', onEnded)
     audio.addEventListener('error', onError)
 
     return () => {
-      audio.removeEventListener('play', onPlay)
+      audio.removeEventListener('playing', onPlaying)
       audio.removeEventListener('pause', onPause)
-      audio.removeEventListener('waiting', onWaiting)
       audio.removeEventListener('ended', onEnded)
       audio.removeEventListener('error', onError)
     }
@@ -253,6 +252,16 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (streamState !== 'connecting') return
     const id = setTimeout(() => {
+      const audio = audioRef.current
+      // Si el audio ya arrancó, el reloj no manda: un buffering no es un fallo.
+      if (
+        audio &&
+        !audio.paused &&
+        (audio.currentTime > 0 || audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA)
+      ) {
+        setStreamState('playing')
+        return
+      }
       if (streamStateRef.current !== 'connecting') return
       setStreamState('error')
       const name = stationNameRef.current?.trim()
